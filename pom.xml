@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.johnnei</groupId>
+  <artifactId>sonar-gitlab-plugin</artifactId>
+  <name>SonarQube :: GitLab Plugin</name>
+  <packaging>sonar-plugin</packaging>
+  <version>0.1.0-SNAPSHOT</version>
+  <description>Provide merge request analysis support between GitLab and SonarQube</description>
+  <inceptionYear>2016</inceptionYear>
+
+  <properties>
+    <!-- Compiler Settings -->
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Deployment -->
+    <sonar.pluginName>GitLab Integration</sonar.pluginName>
+    <sonar.pluginClass>org.johnnei.sonar.GitLabPlugin</sonar.pluginClass>
+
+    <!-- Dependency Versions -->
+    <dependency.sonar-plugin-api.version>5.6</dependency.sonar-plugin-api.version>
+    <dependency.java-gitlab-api.version>1.2.7</dependency.java-gitlab-api.version>
+  </properties>
+
+  <developers>
+    <developer>
+      <name>Johan "Johnnei"</name>
+      <email>johnnei07@live.nl</email>
+      <organization>Johnnei</organization>
+      <organizationUrl>https://johnnei.org</organizationUrl>
+      <timezone>+1</timezone>
+    </developer>
+  </developers>
+
+  <licenses>
+    <license>
+      <name>GNU LGPL 3</name>
+      <url>http://www.gnu.org/licenses/lgpl.txt</url>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:gitlab@git.johnnei.org:Johnnei/sonar-gitlab-plugin.git</connection>
+    <developerConnection>scm:git:gitlab@git.johnnei.org:Johnnei/sonar-gitlab-plugin.git</developerConnection>
+    <url>https://git.johnnei.org/Johnnei/sonar-gitlab-plugin</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <ciManagement>
+    <system>GitLab CI</system>
+    <url>https://git.johnnei.org/Johnnei/sonar-gitlab-plugin/pipelines</url>
+  </ciManagement>
+
+  <issueManagement>
+    <system>JIRA</system>
+    <url>https://jira.johnnei.org/projects/SGP/issues/</url>
+  </issueManagement>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId>
+        <artifactId>sonar-packaging-maven-plugin</artifactId>
+        <version>1.17</version>
+        <extensions>true</extensions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.sonarsource.sonarqube</groupId>
+      <artifactId>sonar-plugin-api</artifactId>
+      <version>${dependency.sonar-plugin-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>2.0.3</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Java Wrapper for the GitLab API -->
+    <dependency>
+      <groupId>org.gitlab</groupId>
+      <artifactId>java-gitlab-api</artifactId>
+      <version>${dependency.java-gitlab-api.version}</version>
+    </dependency>
+
+    <!-- unit tests -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>1.10.19</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+</project>
