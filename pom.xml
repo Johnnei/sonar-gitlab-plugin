@@ -131,6 +131,7 @@
                   <artifacts>
                     <artifact>
                       <file>${project.build.directory}/${project.build.finalName}.jar</file>
+                      <dest>sonar-gitlab-plugin.jar</dest>
                     </artifact>
                   </artifacts>
                 </image>

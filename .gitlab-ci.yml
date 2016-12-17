@@ -1,14 +1,16 @@
-image: docker:dind
+image: maven:3.3.9-jdk-8
 
 stages:
     - build
     - test
-    - qa
-    - artifact
+    - integration
 
-build:
+build-package:
     stage: build
-    script: "mvn -B compile test-compile"
+    script: "mvn -B package -DskipTests -Ddocker.skip"
+    artifacts:
+      paths:
+      - "target/sonar-gitlab-plugin-*.jar"
 
 quicktests:
     stage: test
@@ -16,10 +18,16 @@ quicktests:
     artifacts:
       expire_in: 1 week
       paths:
-      - "**/target/jacoco.exec"
+      - "target/jacoco.exec"
 
-integration-SQ-LTS-GitLab-8-14:
-    image: maven-3.3.3
-    tags: [ "docker" ]
-    stage: test
-    script: "mvn -B verify"
+SQ-LTS-GitLab-8.14:
+    image: localhost:5000/dind-maven:latest
+    stage: integration
+    services: ["docker:dind"]
+    dependencies: []
+    tags: ["dind"]
+    before_script:
+    - "mvn --version"
+    - "docker info"
+    script:
+    - "mvn -B verify -Ddocker.provider=local"
