@@ -1,4 +1,4 @@
-package org.johnnei.internal.sonar;
+package org.johnnei.sgp.internal.sonar;
 
 import javax.annotation.CheckForNull;
 
@@ -11,7 +11,7 @@ import org.sonar.api.batch.BatchSide;
 import org.sonar.api.batch.InstantiationStrategy;
 import org.sonar.api.config.Settings;
 
-import org.johnnei.sonar.GitLabPlugin;
+import org.johnnei.sgp.sonar.GitLabPlugin;
 
 /**
  * Class to create a domain orientated facade of the SonarQube settings.
@@ -56,7 +56,10 @@ public class GitLabPluginConfiguration {
 		project = gitlabApi.getAllProjects().stream()
 			.filter(p -> projectName.equals(p.getNameWithNamespace()))
 			.findAny()
-			.orElseThrow(() -> new IllegalArgumentException("Failed to find project '%s'. Is the user authorized to access the project?"));
+			.orElseThrow(() -> new IllegalArgumentException(String.format(
+				"Failed to find project '%s'. Is the user authorized to access the project?",
+				projectName
+			)));
 	}
 
 	public void setBaseDir(File baseDir) {

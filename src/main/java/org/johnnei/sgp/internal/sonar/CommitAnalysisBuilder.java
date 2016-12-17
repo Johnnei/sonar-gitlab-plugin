@@ -1,4 +1,4 @@
-package org.johnnei.internal.sonar;
+package org.johnnei.sgp.internal.sonar;
 
 import java.io.IOException;
 

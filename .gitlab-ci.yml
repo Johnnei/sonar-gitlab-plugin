@@ -1,0 +1,25 @@
+image: docker:dind
+
+stages:
+    - build
+    - test
+    - qa
+    - artifact
+
+build:
+    stage: build
+    script: "mvn -B compile test-compile"
+
+quicktests:
+    stage: test
+    script: "mvn -B test --fail-at-end"
+    artifacts:
+      expire_in: 1 week
+      paths:
+      - "**/target/jacoco.exec"
+
+integration-SQ-LTS-GitLab-8-14:
+    image: maven-3.3.3
+    tags: [ "docker" ]
+    stage: test
+    script: "mvn -B verify"

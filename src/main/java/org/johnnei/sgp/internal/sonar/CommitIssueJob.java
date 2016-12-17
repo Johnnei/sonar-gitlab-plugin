@@ -1,4 +1,4 @@
-package org.johnnei.internal.sonar;
+package org.johnnei.sgp.internal.sonar;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -13,8 +13,8 @@ import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
-import org.johnnei.internal.gitlab.CommitCommenter;
-import org.johnnei.sonar.GitLabPlugin;
+import org.johnnei.sgp.internal.gitlab.CommitCommenter;
+import org.johnnei.sgp.sonar.GitLabPlugin;
 
 /**
  * Created by Johnnei on 2016-11-12.

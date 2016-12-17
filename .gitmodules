@@ -1,0 +1,3 @@
+[submodule "it-sources"]
+	path = it-sources
+	url = gitlab@git.johnnei.org:Johnnei/sonar-gitlab-plugin-it-sources.git

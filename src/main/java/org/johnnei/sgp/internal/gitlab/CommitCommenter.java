@@ -1,4 +1,4 @@
-package org.johnnei.internal.gitlab;
+package org.johnnei.sgp.internal.gitlab;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -9,7 +9,7 @@ import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
-import org.johnnei.internal.sonar.SonarReport;
+import org.johnnei.sgp.internal.sonar.SonarReport;
 
 /**
  * Created by Johnnei on 2016-11-12.

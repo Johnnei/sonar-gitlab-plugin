@@ -1,4 +1,4 @@
-package org.johnnei.internal.sonar;
+package org.johnnei.sgp.internal.sonar;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
