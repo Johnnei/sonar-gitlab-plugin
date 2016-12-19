@@ -90,8 +90,7 @@ public abstract class IntegrationTest {
 	protected void sonarAnalysis(String commitHash) throws IOException {
 		LOGGER.info("Starting SonarQube Analysis.");
 
-		String argument = OS_COMMAND + " \"" +
-				"mvn" +
+		String argument = "mvn" +
 				" clean" +
 				" compile " +
 				" sonar:sonar" +
@@ -100,15 +99,15 @@ public abstract class IntegrationTest {
 				" -Dsonar.gitlab.uri=" + GITLAB_HOST +
 				" -Dsonar.gitlab.auth.token=" + gitLabAuthToken +
 				" -Dsonar.gitlab.analyse.project=root/sgp-it" +
-				" -Dsonar.gitlab.analyse.commit=" + commitHash +
-				"\"";
+				" -Dsonar.gitlab.analyse.commit=" + commitHash;
 
-		LOGGER.debug("Running: " + OS_SHELL + " " + argument);
+		LOGGER.debug("Running: " + OS_SHELL + " " + OS_COMMAND + " " + argument);
 
 		Process process = new ProcessBuilder()
 			.directory(new File("it-sources"))
 			.command(
 				OS_SHELL,
+				OS_COMMAND,
 				argument
 			)
 			.inheritIO()
