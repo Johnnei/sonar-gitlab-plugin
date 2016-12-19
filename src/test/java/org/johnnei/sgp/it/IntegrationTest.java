@@ -54,7 +54,7 @@ public abstract class IntegrationTest {
 
 	private static String getProperty(String key, String defaultValue) {
 		String value = System.getProperty(key);
-		if (value == null || value.contains("$")) {
+		if (value == null || value.trim().isEmpty() || value.contains("$")) {
 			value = defaultValue;
 		}
 
