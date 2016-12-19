@@ -30,4 +30,6 @@ SQ-LTS-GitLab-8.14:
     - "mvn --version"
     - "docker info"
     script:
-    - "mvn -B verify -Ddocker.provider=local"
+    - "docker pull gitlab/gitlab-ce"
+    - "docker pull sonarqube:lts"
+    - "mvn -B verify -Ddocker.provider=remote"
