@@ -123,7 +123,9 @@ public abstract class IntegrationTest {
 			" compile " +
 			// Invoke sonar analysis
 			" sonar:sonar" +
-			// Enable Debug logging to analyse test failures.
+			// Enable Maven debug to not suppress the Sonar debug logging
+			" --debug" +
+			// Enable Sonar debug logging to analyse test failures.
 			" -Dsonar.log.level=DEBUG" +
 			// Run analysis in issues mode in order to process the issues on the scanner side
 			" -Dsonar.analysis.mode=issues" +

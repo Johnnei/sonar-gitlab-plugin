@@ -1,5 +1,7 @@
 package org.johnnei.sgp.internal.util;
 
+import javax.annotation.Nonnull;
+
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
@@ -14,7 +16,7 @@ public class Stopwatch {
 
 	private String notice;
 
-	public void start(String notice) {
+	public void start(@Nonnull String notice) {
 		this.notice = notice;
 		LOGGER.info(notice);
 		startTime = System.nanoTime();

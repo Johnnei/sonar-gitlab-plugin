@@ -63,7 +63,6 @@ public class GitLabPluginConfiguration {
 		project = gitlabApi.getAllProjects().stream()
 			.filter(p -> {
 				String name = String.format("%s/%s", p.getNamespace().getName(), p.getName());
-				LOGGER.info("Filtering \"{}\" = \"{}\"", name, projectName);
 				LOGGER.debug("Filtering \"{}\" = \"{}\"", name, projectName);
 				return projectName.equals(name);
 			})
