@@ -117,15 +117,26 @@ public abstract class IntegrationTest {
 		LOGGER.info("Starting SonarQube Analysis.");
 
 		String argument = "mvn -B" +
-				" clean" +
-				" compile " +
-				" sonar:sonar" +
-				" -Dsonar.analysis.mode=issues" +
-				" -Dsonar.host.url=" + SONARQUBE_HOST +
-				" -Dsonar.gitlab.uri=" + GITLAB_HOST +
-				" -Dsonar.gitlab.auth.token=" + gitLabAuthToken +
-				" -Dsonar.gitlab.analyse.project=root/sgp-it" +
-				" -Dsonar.gitlab.analyse.commit=" + commitHash;
+			// Ensure a clean state
+			" clean" +
+			// Provide binaries
+			" compile " +
+			// Invoke sonar analysis
+			" sonar:sonar" +
+			// Enable Debug logging to analyse test failures.
+			" -Dsonar.log.level=DEBUG" +
+			// Run analysis in issues mode in order to process the issues on the scanner side
+			" -Dsonar.analysis.mode=issues" +
+			// The host at which the SonarQube instance with our plugin is running.
+			" -Dsonar.host.url=" + SONARQUBE_HOST +
+			// The host at which our target gitlab instance is running.
+			" -Dsonar.gitlab.uri=" + GITLAB_HOST +
+			// The authentication token to access the project within Gitlab
+			" -Dsonar.gitlab.auth.token=" + gitLabAuthToken +
+			// The project to comment on
+			" -Dsonar.gitlab.analyse.project=root/sgp-it" +
+			// The commit we're analysing.
+			" -Dsonar.gitlab.analyse.commit=" + commitHash;
 		commandLine.startAndAwait(argument);
 	}
 
