@@ -95,9 +95,8 @@
         <version>2.19.1</version>
         <configuration>
           <systemProperties>
-            <sonarqube.host>http://${docker.containers.sonarqube.ports.9000/tcp.host}:${docker.containers.sonarqube.ports.9000/tcp.port}
-            </sonarqube.host>
-            <gitlab.host>http://${docker.containers.gitlab.ports.80/tcp.host}:${docker.containers.gitlab.ports.80/tcp.port}</gitlab.host>
+            <sonarqube.host>http://${sonar-plugin.host}:${sonar-plugin.port}</sonarqube.host>
+            <gitlab.host>http://${gitlab.host}:${gitlab.port}</gitlab.host>
             <os.shell>${os.shell}</os.shell>
             <os.command>${os.command}</os.command>
           </systemProperties>
@@ -114,64 +113,69 @@
 
       <!-- Plugin to run Docker Container based ITs -->
       <plugin>
-        <groupId>net.wouterdanes.docker</groupId>
+        <groupId>io.fabric8</groupId>
         <artifactId>docker-maven-plugin</artifactId>
-        <version>5.0.0</version>
+        <version>0.18.1</version>
+        <configuration>
+          <showLogs>true</showLogs>
+          <startParallel>true</startParallel>
+          <images>
+            <image>
+              <name>sonar-gitlab-plugin</name>
+              <alias>sonar-plugin</alias>
+              <build>
+                <dockerFileDir>${project.basedir}/src/test/resources/docker</dockerFileDir>
+                <!-- Add the build artifact to the build context. -->
+                <assembly>
+                  <descriptorRef>artifact</descriptorRef>
+                </assembly>
+              </build>
+              <run>
+                <ports>
+                  <port>+sonar-plugin.host:sonar-plugin.port:9000</port>
+                </ports>
+                <wait>
+                  <log>Process\[web\] is up</log>
+                  <time>30000</time>
+                </wait>
+              </run>
+            </image>
+            <image>
+              <name>gitlab/gitlab-ce</name>
+              <alias>gitlab</alias>
+              <run>
+                <ports>
+                  <port>+gitlab.host:gitlab.port:80</port>
+                </ports>
+                <wait>
+                  <log>master process ready</log>
+                  <time>180000</time>
+                </wait>
+              </run>
+            </image>
+          </images>
+        </configuration>
         <executions>
           <execution>
-            <id>package</id>
+            <id>build-container</id>
+            <phase>package</phase>
             <goals>
-              <goal>build-images</goal>
-            </goals>
-            <configuration>
-              <images>
-                <image>
-                  <id>gitlab-plugin</id>
-                  <dockerFile>${project.basedir}/src/test/resources/docker/Dockerfile</dockerFile>
-                  <artifacts>
-                    <artifact>
-                      <file>${project.build.directory}/${project.build.finalName}.jar</file>
-                      <dest>sonar-gitlab-plugin.jar</dest>
-                    </artifact>
-                  </artifacts>
-                </image>
-              </images>
-            </configuration>
-          </execution>
-          <execution>
-            <id>start</id>
-            <goals>
-              <goal>start-containers</goal>
-            </goals>
-            <configuration>
-              <!-- You can set forceCleanup to true to stop and remove started containers
-                   at the end of the build even if the stop-containers goal is not executed
-                   (useful for preventing Ctrl+C causing dangling containers) -->
-              <forceCleanup>false</forceCleanup>
-              <containers>
-                <container>
-                  <id>sonarqube</id>
-                  <image>gitlab-plugin</image>
-                  <waitForStartup>Process\[web\] is up</waitForStartup>
-                </container>
-                <container>
-                  <id>gitlab</id>
-                  <image>gitlab/gitlab-ce</image>
-                  <waitForStartup>master process ready</waitForStartup>
-                </container>
-              </containers>
-            </configuration>
-          </execution>
-          <execution>
-            <id>stop</id>
-            <goals>
-              <goal>stop-containers</goal>
+              <goal>build</goal>
             </goals>
           </execution>
           <execution>
-            <id>verify</id>
+            <id>start-containers</id>
+            <phase>pre-integration-test</phase>
             <goals>
-              <goal>verify</goal>
+              <goal>start</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>cleanup-containers</id>
+            <phase>post-integration-test</phase>
+            <goals>
+              <goal>stop</goal>
+              <goal>remove</goal>
             </goals>
           </execution>
         </executions>

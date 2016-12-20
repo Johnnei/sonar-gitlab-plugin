@@ -2,6 +2,10 @@ package org.johnnei.sgp.it;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -20,6 +24,8 @@ import org.gitlab.api.models.GitlabSession;
 import org.hamcrest.collection.IsEmptyCollection;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,15 +52,21 @@ public abstract class IntegrationTest {
 	private static final String OS_SHELL = getProperty("os.shell", "/bin/bash");
 	private static final String OS_COMMAND = getProperty("os.command", "-c");
 
+	@Rule
+	public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
 	protected GitlabAPI gitlabApi;
 
 	protected GitlabProject project;
+
+	private CommandLine commandLine;
 
 	private String gitLabAuthToken;
 
 	private static String getProperty(String key, String defaultValue) {
 		String value = System.getProperty(key);
 		if (value == null || value.trim().isEmpty() || value.contains("$")) {
+			LOGGER.debug("Resolve failed: \"{}\" -> \"{}\"", key, value);
 			value = defaultValue;
 		}
 
@@ -65,8 +77,29 @@ public abstract class IntegrationTest {
 	public void setUp() throws Exception {
 		LOGGER.debug("GitLab Host: {}", GITLAB_HOST);
 		LOGGER.debug("SonarQube Host: {}", SONARQUBE_HOST);
+
+		File repo = temporaryFolder.newFolder("repo");
+		prepareGitRepo(repo);
+
+		commandLine = new CommandLine(OS_SHELL, OS_COMMAND, repo);
+
 		ensureAdminCreated();
 		createProject();
+		initializeProject();
+	}
+
+	private void prepareGitRepo(File repo) throws IOException {
+		LOGGER.info("Preparing GIT repository in {}", repo.toPath().toString());
+		Path sourceFolder = new File("it-sources").toPath();
+		Files.walk(sourceFolder)
+			.forEach(file -> {
+				String destination = file.toString().replace(sourceFolder.toString(), repo.toPath().toString());
+				try {
+					Files.copy(file, Paths.get(destination), StandardCopyOption.REPLACE_EXISTING);
+				} catch (IOException e) {
+					throw new IllegalStateException("Failed to prepare git repository", e);
+				}
+			});
 	}
 
 	@After
@@ -76,21 +109,14 @@ public abstract class IntegrationTest {
 
 	protected void checkout(String ref) throws IOException {
 		LOGGER.info("Checking out {}");
-		Process process = new ProcessBuilder()
-			.directory(new File("it-sources"))
-			.command("git", "checkout", ref)
-			.start();
-		try {
-			process.waitFor();
-		} catch (InterruptedException e) {
-			process.destroy();
-		}
+
+		commandLine.startAndAwait("git checkout " + ref);
 	}
 
 	protected void sonarAnalysis(String commitHash) throws IOException {
 		LOGGER.info("Starting SonarQube Analysis.");
 
-		String argument = "mvn" +
+		String argument = "mvn -B" +
 				" clean" +
 				" compile " +
 				" sonar:sonar" +
@@ -100,26 +126,7 @@ public abstract class IntegrationTest {
 				" -Dsonar.gitlab.auth.token=" + gitLabAuthToken +
 				" -Dsonar.gitlab.analyse.project=root/sgp-it" +
 				" -Dsonar.gitlab.analyse.commit=" + commitHash;
-
-		LOGGER.debug("Running: " + OS_SHELL + " " + OS_COMMAND + " " + argument);
-
-		Process process = new ProcessBuilder()
-			.directory(new File("it-sources"))
-			.command(
-				OS_SHELL,
-				OS_COMMAND,
-				argument
-			)
-			.inheritIO()
-			.start();
-		try {
-			int returnCode = process.waitFor();
-			if (returnCode != 0) {
-				throw new RuntimeException("Process failed: " + returnCode);
-			}
-		} catch (InterruptedException e) {
-			process.destroy();
-		}
+		commandLine.startAndAwait(argument);
 	}
 
 	private void ensureAdminCreated() throws Exception {
@@ -217,6 +224,10 @@ public abstract class IntegrationTest {
 		LOGGER.info("Creating Project");
 		project = gitlabApi.createProject("sgp-it");
 		assertNotNull("Failed to create project in GitLab", project);
+	}
+
+	private void initializeProject() throws IOException {
+
 	}
 
 	private void deleteProject() throws IOException {
