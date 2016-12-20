@@ -136,7 +136,7 @@
                 </ports>
                 <wait>
                   <log>Process\[web\] is up</log>
-                  <time>30000</time>
+                  <time>60000</time>
                 </wait>
               </run>
             </image>
@@ -149,7 +149,7 @@
                 </ports>
                 <wait>
                   <log>master process ready</log>
-                  <time>180000</time>
+                  <time>300000</time>
                 </wait>
               </run>
             </image>
