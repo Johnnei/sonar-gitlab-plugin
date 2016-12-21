@@ -226,6 +226,14 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- Simplification of Refecltion -->
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-reflect</artifactId>
+      <version>1.6.6</version>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Interaction with GitLab / SonarQube -->
     <dependency>
       <groupId>com.squareup.okhttp3</groupId>

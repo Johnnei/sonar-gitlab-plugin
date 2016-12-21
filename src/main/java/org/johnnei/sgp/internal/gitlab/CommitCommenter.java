@@ -9,7 +9,7 @@ import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
-import org.johnnei.sgp.internal.sonar.SonarReport;
+import org.johnnei.sgp.internal.model.SonarReport;
 
 /**
  * Created by Johnnei on 2016-11-12.
@@ -29,7 +29,8 @@ public class CommitCommenter {
 		boolean allCommentsSucceeded = report.getIssues()
 			.flatMap(issue -> mapIssueToFile(report, issue))
 			.map(mappedIssue -> postComment(report, mappedIssue))
-			.noneMatch(a -> false);
+			// All match true
+			.allMatch(result -> result);
 
 		if (!allCommentsSucceeded) {
 			throw new ProcessException("One or more comments failed to be added to the commit.");
