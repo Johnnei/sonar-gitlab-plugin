@@ -114,6 +114,8 @@ public abstract class IntegrationTest {
 
 		commandLine.startAndAwait("git init");
 		commandLine.startAndAwait("git remote add origin " + GITLAB_REPO);
+		commandLine.startAndAwait("git config user.email \"example@example.com\"");
+		commandLine.startAndAwait("git config user.name \"SGP Integration\"");
 	}
 
 	@After
