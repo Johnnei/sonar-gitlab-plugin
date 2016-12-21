@@ -1,7 +1,9 @@
 package org.johnnei.sgp.it;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,18 +27,21 @@ public class CommandLine {
 		this.workingDirectory = workingDirectory;
 	}
 
-	public Process start(String command) throws IOException {
+	private Process start(String command, boolean captureOutput) throws IOException {
 		LOGGER.debug("Running: " + shell + " " + commandArgument + " " + command);
 
-		return new ProcessBuilder()
+		ProcessBuilder builder = new ProcessBuilder()
 			.directory(workingDirectory)
-			.command(shell, commandArgument, command)
-			.inheritIO()
-			.start();
+			.command(shell, commandArgument, command);
+
+		if (!captureOutput) {
+			builder.inheritIO();
+		}
+
+		return builder.start();
 	}
 
-	public void startAndAwait(String command) throws IOException {
-		Process process = start(command);
+	private void awaitExit(Process process) throws IOException {
 		try {
 			int returnCode = process.waitFor();
 			if (returnCode != 0) {
@@ -45,5 +50,33 @@ public class CommandLine {
 		} catch (InterruptedException e) {
 			process.destroy();
 		}
+	}
+
+	public void startAndAwait(String command) throws IOException {
+		awaitExit(start(command, false));
+	}
+
+	public String startAndAwaitOutput(String command) throws IOException {
+		Process process = start(command, true);
+
+		StringBuilder builder = new StringBuilder();
+
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+			awaitExit(process);
+
+			String line;
+			boolean hasContent = false;
+			while ((line = reader.readLine()) != null) {
+				if (hasContent) {
+					builder.append("\n");
+				}
+
+				LOGGER.debug("Read input line: {}", line);
+				builder.append(line);
+				hasContent = true;
+			}
+		}
+
+		return builder.toString();
 	}
 }

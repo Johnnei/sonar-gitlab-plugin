@@ -29,10 +29,7 @@ public class CommitCommenter {
 		boolean allCommentsSucceeded = report.getIssues()
 			.flatMap(issue -> mapIssueToFile(report, issue))
 			.map(mappedIssue -> postComment(report, mappedIssue))
-			// All comments should succeed.
-			.reduce((a, b) -> a && b)
-			// When there are no comments nothing has failed.
-			.orElse(true);
+			.noneMatch(a -> false);
 
 		if (!allCommentsSucceeded) {
 			throw new ProcessException("One or more comments failed to be added to the commit.");

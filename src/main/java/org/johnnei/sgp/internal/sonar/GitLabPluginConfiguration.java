@@ -74,18 +74,8 @@ public class GitLabPluginConfiguration {
 		stopwatch.stop();
 	}
 
-	public void setBaseDir(File baseDir) {
-		gitBaseDir = findGitBaseDir(baseDir);
-	}
-
-	private File findGitBaseDir(@CheckForNull File baseDir) {
-		if (baseDir == null) {
-			return null;
-		}
-		if (new File(baseDir, ".git").exists()) {
-			return baseDir;
-		}
-		return findGitBaseDir(baseDir.getParentFile());
+	public void setBaseDir(File gitBaseDir) {
+		this.gitBaseDir = gitBaseDir;
 	}
 
 	public File getGitBaseDir() {

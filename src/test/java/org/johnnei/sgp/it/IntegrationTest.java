@@ -24,6 +24,7 @@ import org.gitlab.api.models.GitlabSession;
 import org.hamcrest.collection.IsEmptyCollection;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
@@ -47,7 +48,13 @@ public abstract class IntegrationTest {
 
 	private static final Pattern VALUE_ATTRIBUTE = Pattern.compile("value=\"(.*?)\"");
 
-	private static final String GITLAB_HOST = getProperty("gitlab.host", "http://localhost:80");
+	private static final String GITLAB_HOST = getProperty("gitlab.host", "localhost:80");
+	private static final String GITLAB_URL = String.format("http://%s", GITLAB_HOST);
+	private static final String GITLAB_REPO = String.format(
+		"http://root:%s@%s/root/sgp-it.git",
+		ADMIN_PASSWORD.replaceAll("@", "%40").replaceAll("!", "%21"),
+		GITLAB_HOST
+	);
 	private static final String SONARQUBE_HOST = getProperty("sonarqube.host", "http://localhost:9000");
 	private static final String OS_SHELL = getProperty("os.shell", "/bin/bash");
 	private static final String OS_COMMAND = getProperty("os.command", "-c");
@@ -73,19 +80,23 @@ public abstract class IntegrationTest {
 		return value;
 	}
 
+	@BeforeClass
+	public static void setUpClass() {
+		LOGGER.info("GitLab Host: {}", GITLAB_HOST);
+		LOGGER.info("GitLab URL: {}", GITLAB_URL);
+		LOGGER.info("GitLab Repo: {}", GITLAB_REPO);
+		LOGGER.info("SonarQube URL: {}", SONARQUBE_HOST);
+	}
+
 	@Before
 	public void setUp() throws Exception {
-		LOGGER.debug("GitLab Host: {}", GITLAB_HOST);
-		LOGGER.debug("SonarQube Host: {}", SONARQUBE_HOST);
-
 		File repo = temporaryFolder.newFolder("repo");
-		prepareGitRepo(repo);
-
 		commandLine = new CommandLine(OS_SHELL, OS_COMMAND, repo);
+
+		prepareGitRepo(repo);
 
 		ensureAdminCreated();
 		createProject();
-		initializeProject();
 	}
 
 	private void prepareGitRepo(File repo) throws IOException {
@@ -100,6 +111,9 @@ public abstract class IntegrationTest {
 					throw new IllegalStateException("Failed to prepare git repository", e);
 				}
 			});
+
+		commandLine.startAndAwait("git init");
+		commandLine.startAndAwait("git remote add origin " + GITLAB_REPO);
 	}
 
 	@After
@@ -107,10 +121,15 @@ public abstract class IntegrationTest {
 		deleteProject();
 	}
 
-	protected void checkout(String ref) throws IOException {
-		LOGGER.info("Checking out {}");
+	protected String gitCommitAll() throws IOException {
+		commandLine.startAndAwait("git add .");
+		commandLine.startAndAwait("git commit -m \"My commit message\"");
+		commandLine.startAndAwait("git push -u origin master");
+		return getLastCommit();
+	}
 
-		commandLine.startAndAwait("git checkout " + ref);
+	private String getLastCommit() throws IOException {
+		return commandLine.startAndAwaitOutput("git log -n 1 --format=%H");
 	}
 
 	protected void sonarAnalysis(String commitHash) throws IOException {
@@ -132,7 +151,7 @@ public abstract class IntegrationTest {
 			// The host at which the SonarQube instance with our plugin is running.
 			" -Dsonar.host.url=" + SONARQUBE_HOST +
 			// The host at which our target gitlab instance is running.
-			" -Dsonar.gitlab.uri=" + GITLAB_HOST +
+			" -Dsonar.gitlab.uri=" + GITLAB_URL +
 			// The authentication token to access the project within Gitlab
 			" -Dsonar.gitlab.auth.token=" + gitLabAuthToken +
 			// The project to comment on
@@ -164,7 +183,7 @@ public abstract class IntegrationTest {
 
 
 		Request homeRequest = new Request.Builder()
-			.url(GITLAB_HOST)
+			.url(GITLAB_URL)
 			.build();
 
 		Response response = client.newCall(homeRequest).execute();
@@ -178,9 +197,9 @@ public abstract class IntegrationTest {
 			}
 		}
 
-		GitlabSession session = GitlabAPI.connect(GITLAB_HOST, "root", ADMIN_PASSWORD);
+		GitlabSession session = GitlabAPI.connect(GITLAB_URL, "root", ADMIN_PASSWORD);
 		gitLabAuthToken = session.getPrivateToken();
-		gitlabApi = GitlabAPI.connect(GITLAB_HOST, gitLabAuthToken);
+		gitlabApi = GitlabAPI.connect(GITLAB_URL, gitLabAuthToken);
 		LOGGER.info("GitLab API Initialized.");
 	}
 
@@ -211,7 +230,7 @@ public abstract class IntegrationTest {
 		}
 
 		return new Request.Builder()
-			.url(GITLAB_HOST + "/users/password")
+			.url(GITLAB_URL + "/users/password")
 			.post(formBodyBuilder.build())
 			.build();
 	}
@@ -237,10 +256,6 @@ public abstract class IntegrationTest {
 		LOGGER.info("Creating Project");
 		project = gitlabApi.createProject("sgp-it");
 		assertNotNull("Failed to create project in GitLab", project);
-	}
-
-	private void initializeProject() throws IOException {
-
 	}
 
 	private void deleteProject() throws IOException {

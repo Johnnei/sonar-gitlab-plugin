@@ -96,7 +96,7 @@
         <configuration>
           <systemProperties>
             <sonarqube.host>http://${sonar-plugin.host}:${sonar-plugin.port}</sonarqube.host>
-            <gitlab.host>http://${gitlab.host}:${gitlab.port}</gitlab.host>
+            <gitlab.host>${gitlab.host}:${gitlab.port}</gitlab.host>
             <os.shell>${os.shell}</os.shell>
             <os.command>${os.command}</os.command>
           </systemProperties>

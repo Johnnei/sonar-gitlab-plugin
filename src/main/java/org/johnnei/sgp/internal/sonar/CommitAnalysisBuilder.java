@@ -1,5 +1,7 @@
 package org.johnnei.sgp.internal.sonar;
 
+import javax.annotation.CheckForNull;
+import java.io.File;
 import java.io.IOException;
 
 import org.sonar.api.CoreProperties;
@@ -32,7 +34,19 @@ public class CommitAnalysisBuilder extends ProjectBuilder {
 		}
 
 		ensureCorrectConfiguration();
-		context.projectReactor().getRoot().getBaseDir();
+		configuration.setBaseDir(findGitBaseDir(context.projectReactor().getRoot().getBaseDir()));
+	}
+
+	private File findGitBaseDir(@CheckForNull File baseDir) {
+		LOGGER.debug("Looking up git base dir. Current point: {}", baseDir);
+		if (baseDir == null) {
+			return null;
+		}
+		if (new File(baseDir, ".git").exists()) {
+			LOGGER.debug("Found git base dir.");
+			return baseDir;
+		}
+		return findGitBaseDir(baseDir.getParentFile());
 	}
 
 	private void ensureCorrectConfiguration() {
