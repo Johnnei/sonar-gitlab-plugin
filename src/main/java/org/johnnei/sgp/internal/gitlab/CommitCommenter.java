@@ -1,4 +1,4 @@
-package org.johnnei.internal.gitlab;
+package org.johnnei.sgp.internal.gitlab;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -9,7 +9,7 @@ import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
-import org.johnnei.internal.sonar.SonarReport;
+import org.johnnei.sgp.internal.model.SonarReport;
 
 /**
  * Created by Johnnei on 2016-11-12.
@@ -29,10 +29,8 @@ public class CommitCommenter {
 		boolean allCommentsSucceeded = report.getIssues()
 			.flatMap(issue -> mapIssueToFile(report, issue))
 			.map(mappedIssue -> postComment(report, mappedIssue))
-			// All comments should succeed.
-			.reduce((a, b) -> a && b)
-			// When there are no comments nothing has failed.
-			.orElse(true);
+			// All match true
+			.allMatch(result -> result);
 
 		if (!allCommentsSucceeded) {
 			throw new ProcessException("One or more comments failed to be added to the commit.");

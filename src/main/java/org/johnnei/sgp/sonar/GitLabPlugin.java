@@ -1,12 +1,12 @@
-package org.johnnei.sonar;
+package org.johnnei.sgp.sonar;
 
 import org.sonar.api.Plugin;
 import org.sonar.api.Properties;
 import org.sonar.api.Property;
 
-import org.johnnei.internal.sonar.CommitAnalysisBuilder;
-import org.johnnei.internal.sonar.CommitIssueJob;
-import org.johnnei.internal.sonar.GitLabPluginConfiguration;
+import org.johnnei.sgp.internal.sonar.CommitAnalysisBuilder;
+import org.johnnei.sgp.internal.sonar.CommitIssueJob;
+import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
 
 /**
  * Class which configures the GitLab plugin within the SonarQube instance.

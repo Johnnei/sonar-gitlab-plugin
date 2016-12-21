@@ -1,0 +1,38 @@
+image: maven:3.3.9-jdk-8
+
+variables:
+  DOCKER_DRIVER: overlay2
+
+stages:
+    - build
+    - test
+    - integration
+
+build-package:
+    stage: build
+    script: "mvn -B package -DskipTests -Ddocker.skip"
+    artifacts:
+      paths:
+      - "target/sonar-gitlab-plugin-*.jar"
+
+quicktests:
+    stage: test
+    script: "mvn -B test --fail-at-end"
+    artifacts:
+      expire_in: 1 week
+      paths:
+      - "target/jacoco.exec"
+
+SQ-LTS-GitLab-8.14:
+    image: localhost:5000/dind-maven:latest
+    stage: integration
+    services: ["docker:dind"]
+    dependencies: []
+    tags: ["dind"]
+    before_script:
+    - "mvn --version"
+    - "docker info"
+    script:
+    - "docker pull gitlab/gitlab-ce"
+    - "docker pull sonarqube:lts"
+    - "mvn -B verify -Ddocker.provider=remote"

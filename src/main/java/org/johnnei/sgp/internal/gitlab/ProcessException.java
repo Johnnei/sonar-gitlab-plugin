@@ -1,4 +1,4 @@
-package org.johnnei.internal.gitlab;
+package org.johnnei.sgp.internal.gitlab;
 
 /**
  * Created by Johnnei on 2016-12-03.

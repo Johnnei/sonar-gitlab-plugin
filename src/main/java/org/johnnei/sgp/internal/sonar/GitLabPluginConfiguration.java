@@ -1,4 +1,4 @@
-package org.johnnei.internal.sonar;
+package org.johnnei.sgp.internal.sonar;
 
 import javax.annotation.CheckForNull;
 
@@ -10,8 +10,11 @@ import org.gitlab.api.models.GitlabProject;
 import org.sonar.api.batch.BatchSide;
 import org.sonar.api.batch.InstantiationStrategy;
 import org.sonar.api.config.Settings;
+import org.sonar.api.utils.log.Logger;
+import org.sonar.api.utils.log.Loggers;
 
-import org.johnnei.sonar.GitLabPlugin;
+import org.johnnei.sgp.internal.util.Stopwatch;
+import org.johnnei.sgp.sonar.GitLabPlugin;
 
 /**
  * Class to create a domain orientated facade of the SonarQube settings.
@@ -19,6 +22,8 @@ import org.johnnei.sonar.GitLabPlugin;
 @BatchSide
 @InstantiationStrategy(InstantiationStrategy.PER_BATCH)
 public class GitLabPluginConfiguration {
+
+	private static final Logger LOGGER = Loggers.get(GitLabPluginConfiguration.class);
 
 	private final Settings settings;
 
@@ -52,25 +57,25 @@ public class GitLabPluginConfiguration {
 			throw new IllegalArgumentException(String.format("Missing '%s' property.", GitLabPlugin.GITLAB_PROJECT_NAME));
 		}
 
+		Stopwatch stopwatch = new Stopwatch();
+		stopwatch.start("Looking up GitLab project.");
 		GitlabAPI gitlabApi = createGitLabConnection();
 		project = gitlabApi.getAllProjects().stream()
-			.filter(p -> projectName.equals(p.getNameWithNamespace()))
+			.filter(p -> {
+				String name = String.format("%s/%s", p.getNamespace().getName(), p.getName());
+				LOGGER.debug("Filtering \"{}\" = \"{}\"", name, projectName);
+				return projectName.equals(name);
+			})
 			.findAny()
-			.orElseThrow(() -> new IllegalArgumentException("Failed to find project '%s'. Is the user authorized to access the project?"));
+			.orElseThrow(() -> new IllegalArgumentException(String.format(
+				"Failed to find project '%s'. Is the user authorized to access the project?",
+				projectName
+			)));
+		stopwatch.stop();
 	}
 
-	public void setBaseDir(File baseDir) {
-		gitBaseDir = findGitBaseDir(baseDir);
-	}
-
-	private File findGitBaseDir(@CheckForNull File baseDir) {
-		if (baseDir == null) {
-			return null;
-		}
-		if (new File(baseDir, ".git").exists()) {
-			return baseDir;
-		}
-		return findGitBaseDir(baseDir.getParentFile());
+	public void setBaseDir(File gitBaseDir) {
+		this.gitBaseDir = gitBaseDir;
 	}
 
 	public File getGitBaseDir() {

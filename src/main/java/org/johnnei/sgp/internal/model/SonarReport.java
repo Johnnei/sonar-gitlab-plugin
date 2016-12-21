@@ -1,4 +1,4 @@
-package org.johnnei.internal.sonar;
+package org.johnnei.sgp.internal.model;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -12,6 +12,8 @@ import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.scan.filesystem.PathResolver;
+
+import org.johnnei.sgp.internal.sorting.IssueSeveritySorter;
 
 /**
  * Created by Johnnei on 2016-11-12.
@@ -41,7 +43,7 @@ public class SonarReport {
 	}
 
 	public Stream<PostJobIssue> getIssues() {
-		return issues.stream().sorted();
+		return issues.stream().sorted(new IssueSeveritySorter());
 	}
 
 	@CheckForNull
