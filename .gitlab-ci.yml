@@ -24,10 +24,16 @@ quicktests:
       paths:
       - "target/jacoco.exec"
 
-sonarqube:
+sonarqube.johnnei.org:
     stage: qa
     script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://sonarqube.johnnei.org -Dsonar.branch=$CI_BUILD_REF_NAME"
     except: ["master"]
+    dependencies: ["quicktests"]
+
+sonarqube.com:
+    stage: qa
+    script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://www.sonarqube.com -Dsonar.login=$SONAR_TOKEN"
+    only: ["develop","feature/SGP-7"]
     dependencies: ["quicktests"]
 
 SQ-LTS-GitLab-8.14:
