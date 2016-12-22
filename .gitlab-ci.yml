@@ -32,8 +32,8 @@ sonarqube.johnnei.org:
 
 sonarqube.com:
     stage: qa
-    script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://www.sonarqube.com -Dsonar.login=$SONAR_TOKEN"
-    only: ["develop","feature/SGP-7"]
+    script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://sonarqube.com -Dsonar.login=$SONAR_TOKEN"
+    only: ["develop"]
     dependencies: ["quicktests"]
 
 SQ-LTS-GitLab-8.14:
