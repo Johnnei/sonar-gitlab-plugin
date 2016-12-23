@@ -50,8 +50,40 @@ sonarqube.com:
     - "docker pull sonarqube:$SONAR_VERSION"
     - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
 
+# Test compatibility with SonarQube Versions
+SQ-6.2-GL-8.14:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "6.2"
+      GITLAB_VERSION: "8.14.5-ce.0"
+
+SQ-6.1-GL-8.14:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "6.1"
+      GITLAB_VERSION: "8.14.5-ce.0"
+
+SQ-6.0-GL-8.14:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "6.0"
+      GITLAB_VERSION: "8.14.5-ce.0"
+
+# Test compatibility with GitLab versions
 SQ-LTS-GL-8.14:
     <<: *it_template
     variables:
       SONAR_VERSION: "lts"
       GITLAB_VERSION: "8.14.5-ce.0"
+
+SQ-LTS-GL-8.13:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "lts"
+      GITLAB_VERSION: "8.13.10-ce.0"
+
+SQ-LTS-GL-8.12:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "lts"
+      GITLAB_VERSION: "8.12.13-ce.0"
