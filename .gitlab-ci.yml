@@ -7,6 +7,7 @@ stages:
     - build
     - test
     - integration
+    - qa
 
 build-package:
     stage: build
@@ -22,6 +23,18 @@ quicktests:
       expire_in: 1 week
       paths:
       - "target/jacoco.exec"
+
+sonarqube.johnnei.org:
+    stage: qa
+    script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://sonarqube.johnnei.org -Dsonar.branch=$CI_BUILD_REF_NAME"
+    except: ["master"]
+    dependencies: ["quicktests"]
+
+sonarqube.com:
+    stage: qa
+    script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://sonarqube.com -Dsonar.login=$SONAR_TOKEN"
+    only: ["develop"]
+    dependencies: ["quicktests"]
 
 SQ-LTS-GitLab-8.14:
     image: localhost:5000/dind-maven:latest
