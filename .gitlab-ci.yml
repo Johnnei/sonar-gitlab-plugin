@@ -36,7 +36,7 @@ sonarqube.com:
     only: ["develop"]
     dependencies: ["quicktests"]
 
-SQ-LTS-GitLab-8.14:
+.integration-test: &it_template
     image: localhost:5000/dind-maven:latest
     stage: integration
     services: ["docker:dind"]
@@ -46,6 +46,12 @@ SQ-LTS-GitLab-8.14:
     - "mvn --version"
     - "docker info"
     script:
-    - "docker pull gitlab/gitlab-ce"
-    - "docker pull sonarqube:lts"
-    - "mvn -B verify -Ddocker.provider=remote"
+    - "docker pull gitlab/gitlab-ce:$GITLAB_VERSION"
+    - "docker pull sonarqube:$SONAR_VERSION"
+    - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
+
+SQ-LTS-GL-8.14:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "lts"
+      GITLAB_VERSION: "8.14.5-ce.0"
