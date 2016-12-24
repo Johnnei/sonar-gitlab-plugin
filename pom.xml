@@ -162,7 +162,7 @@
                 </ports>
                 <wait>
                   <log>master process ready</log>
-                  <time>300000</time>
+                  <time>600000</time>
                 </wait>
               </run>
             </image>
