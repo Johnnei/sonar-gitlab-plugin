@@ -1,11 +1,13 @@
 package org.johnnei.sgp;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.gitlab.api.models.CommitComment;
-import org.hamcrest.collection.IsCollectionWithSize;
+import org.hamcrest.collection.IsEmptyCollection;
 import org.hamcrest.core.IsCollectionContaining;
 import org.junit.Test;
 
@@ -25,26 +27,35 @@ public class CommentOnCommitIT extends IntegrationTest {
 		sonarAnalysis(commitHash);
 
 		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commitHash);
-		assertThat("10 Issues have been reported and thus comments should be there.", commitComments, IsCollectionWithSize.hasSize(10));
 		List<String> comments = commitComments.stream()
 			.map(CommitComment::getNote)
 			.collect(Collectors.toList());
 
-		String[] messages = {
-			"Remove this unused \"inputStream\" local variable.",
-			"Remove this useless assignment to local variable \"inputStream\".",
-			"Close this \"FileInputStream\".",
-			"Either log or rethrow this exception.",
-			"Do not forget to remove this deprecated code someday.",
-			"Replace this \"switch\" statement by \"if\" statements to increase readability.",
-			"Add a default case to this switch.",
-			"Reduce this switch case number of lines from 10 to at most 5, for example by extracting code into methods.",
-			"Refactor this code to not nest more than 3 if/for/while/switch/try statements.",
-			"Change this condition so that it does not always evaluate to \"true\""
-		};
+		List<String> messages = Files.readAllLines(getTestResource("sonarqube/issues.txt"));
 
 		for (String message : messages) {
 			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
+			remoteMatchedComment(comments, message);
 		}
+
+		assertThat(
+			String.format("%s Issues have been reported and thus comments should be there.", messages.size()),
+			comments,
+			IsEmptyCollection.empty()
+		);
+	}
+
+	private void remoteMatchedComment(List<String> comments, String message) {
+		// Remove a single matched comment.
+		Iterator<String> commentsIterator = comments.iterator();
+		while (commentsIterator.hasNext()) {
+			String comment = commentsIterator.next();
+			if (comment.equals(message)) {
+				commentsIterator.remove();
+				return;
+			}
+		}
+
+		throw new IllegalStateException("Matcher passed but didn't remove message.");
 	}
 }

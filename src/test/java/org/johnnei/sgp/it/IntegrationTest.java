@@ -2,6 +2,8 @@ package org.johnnei.sgp.it;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -121,6 +123,20 @@ public abstract class IntegrationTest {
 	@After
 	public void tearDown() throws Exception {
 		deleteProject();
+	}
+
+	protected Path getTestResource(String pathname) {
+		URL url = IntegrationTest.class.getResource("/" + pathname);
+		if (url == null) {
+			LOGGER.warn("Failed to find resource: {}" + pathname);
+			return null;
+		}
+
+		try {
+			return new File(url.toURI()).toPath();
+		} catch (URISyntaxException e) {
+			throw new IllegalArgumentException("Invalid resource path", e);
+		}
 	}
 
 	protected String gitCommitAll() throws IOException {
