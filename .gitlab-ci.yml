@@ -9,6 +9,10 @@ stages:
     - integration
     - qa
 
+cache:
+  paths:
+    - /cache/.m2/repository/
+
 build-package:
     stage: build
     script: "mvn -B package -DskipTests -Ddocker.skip"
