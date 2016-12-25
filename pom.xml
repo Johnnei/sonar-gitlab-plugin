@@ -88,6 +88,10 @@
         <filtering>false</filtering>
       </testResource>
       <testResource>
+        <directory>src/test/expectations/sonarqube-${it.sonar.version}</directory>
+        <filtering>false</filtering>
+      </testResource>
+      <testResource>
         <directory>src/test/filtered-resources</directory>
         <filtering>true</filtering>
       </testResource>

@@ -1,0 +1,13 @@
+Remove this unused "inputStream" local variable.
+Remove this useless assignment to local variable "inputStream".
+Close this "FileInputStream".
+Either log or rethrow this exception.
+Do not forget to remove this deprecated code someday.
+Replace this "switch" statement by "if" statements to increase readability.
+Add a default case to this switch.
+Reduce this switch case number of lines from 10 to at most 5, for example by extracting code into methods.
+Refactor this code to not nest more than 3 if/for/while/switch/try statements.
+Change this condition so that it does not always evaluate to "true"
+Document this public method.
+Document this public method.
+Remove this if statement.
