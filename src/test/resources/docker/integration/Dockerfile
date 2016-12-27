@@ -6,6 +6,10 @@ ARG GIT_VERSION=2.10.2
 
 RUN yum update -y
 
+###
+# Install sofware
+###
+
 # Install Java
 RUN mkdir -p /tmp/dist
 RUN curl -L -C - -b "oraclelicense=accept-securebackup-cookie" -o /tmp/dist/java.rpm http://download.oracle.com/otn-pub/java/jdk/8u111-b14/jdk-8u111-linux-x64.rpm
@@ -20,15 +24,10 @@ RUN mkdir -p /usr/share/maven /usr/share/maven/ref \
   && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn \
   && chmod +x /usr/share/maven/bin/mvn
 
-COPY settings.xml /usr/share/maven/conf/settings.xml
-
 # Install Docker from RPM
 COPY docker-repo.txt /dist/tmp/docker-repo.txt
 RUN cat /dist/tmp/docker-repo.txt >> /etc/yum.repos.d/docker.repo
 RUN yum install -y docker
-
-# Link to DIND which should be linked to this container.
-ENV DOCKER_HOST="tcp://docker:2375"
 
 # Install git (My god Red Hat, Why do you supply stone age git?)
 RUN yum groupinstall -y "Development Tools" && yum install -y curl-devel expat-devel gettext-devel openssl-devel perl-CPAN perl-devel zlib-devel
@@ -40,5 +39,18 @@ RUN mkdir -p /usr/share/git \
 RUN pushd /usr/share/git && make configure && ./configure --prefix=/usr/local && make install && popd
 
 RUN rm -r /tmp/dist
+
+###
+# Configure installed software
+###
+
+# Configure Maven
+COPY settings.xml /usr/share/maven/conf/settings.xml
+RUN echo "" >> /usr/share/maven/conf/logging/simplelogger.properties
+RUN echo "org.slf4j.simpleLogger.log.org.apache=info" >> /usr/share/maven/conf/logging/simplelogger.properties
+RUN echo "org.slf4j.simpleLogger.log.org.codehaus=info" >> /usr/share/maven/conf/logging/simplelogger.properties
+
+# Link to DIND which should be linked to this container.
+ENV DOCKER_HOST="tcp://docker:2375"
 
 CMD "mvn"
