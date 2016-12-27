@@ -141,7 +141,7 @@
               <name>sonar-gitlab-plugin</name>
               <alias>sonar-plugin</alias>
               <build>
-                <dockerFileDir>${project.build.testOutputDirectory}/docker</dockerFileDir>
+                <dockerFileDir>${project.build.testOutputDirectory}/docker/sonarqube</dockerFileDir>
                 <!-- Add the build artifact to the build context. -->
                 <assembly>
                   <descriptorRef>artifact</descriptorRef>
