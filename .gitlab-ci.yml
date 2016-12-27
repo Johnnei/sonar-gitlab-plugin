@@ -6,6 +6,7 @@ variables:
 stages:
     - build
     - test
+    - build-images
     - integration
     - qa
 
@@ -15,7 +16,7 @@ cache:
 
 build-package:
     stage: build
-    script: "mvn -B package -DskipTests -Ddocker.skip"
+    script: "mvn -B clean package -DskipTests -Ddocker.skip"
     artifacts:
       paths:
       - "target/sonar-gitlab-plugin-*.jar"
@@ -40,18 +41,25 @@ sonarqube.com:
     only: ["develop"]
     dependencies: ["quicktests"]
 
+integration-image:
+    stage: build-images
+    tags: ["deploy"]
+    dependencies: []
+    variables:
+      IMAGE_NAME: "sonar-gitlab-plugin:it-$CI_BUILD_REF"
+    script:
+      - "mvn process-test-resources"
+      - "docker build -t $IMAGE_NAME target/test-classes/docker/integration"
+      - "docker tag $IMAGE_NAME $CI_REGISTRY/$IMAGE_NAME"
+      - "docker push $CI_REGISTRY/$IMAGE_NAME"
+
 .integration-test: &it_template
-    image: localhost:5000/dind-maven:latest
+    image: $CI_REGISTRY/sonar-gitlab-plugin:it-$CI_BUILD_REF
     stage: integration
     services: ["docker:dind"]
     dependencies: []
     tags: ["dind"]
-    before_script:
-    - "mvn --version"
-    - "docker info"
     script:
-    - "docker pull gitlab/gitlab-ce:$GITLAB_VERSION"
-    - "docker pull sonarqube:$SONAR_VERSION"
     - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
 
 # Test compatibility with SonarQube Versions
