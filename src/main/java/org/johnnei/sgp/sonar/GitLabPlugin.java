@@ -15,17 +15,21 @@ import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
 	@Property(
 		key = GitLabPlugin.GITLAB_AUTH_TOKEN,
 		name = "GitLab User Token",
-		description = "The private token or access token of the SonarQube user within the GitLab instance."
+		description = "The private token or access token of the SonarQube user within the GitLab instance.",
+		project = true
 	),
 	@Property(
 		key = GitLabPlugin.GITLAB_INSTANCE_URL,
 		name = "GitLab instance URL",
-		description = "The URL at which the GitLab instance can be reached."
+		description = "The URL at which the GitLab instance can be reached.",
+		project = true
 	),
 	@Property(
 		key = GitLabPlugin.GITLAB_PROJECT_NAME,
 		name = "GitLab Project Name",
-		description = "The namespace and name of the GitLab project that is being analysed."
+		description = "The namespace and name of the GitLab project that is being analysed.",
+		project = true,
+		global = false
 	),
 	@Property(
 		key = GitLabPlugin.GITLAB_COMMIT_HASH,
