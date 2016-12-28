@@ -11,35 +11,35 @@ import static org.hamcrest.Matchers.is;
 public class HunkRangeTest {
 
 	@Test
-	public void containsLineStartLine() throws Exception {
+	public void testContainsLineStartLine() throws Exception {
 		HunkRange cut = new HunkRange(5, 7);
 
 		assertThat("Start line is included", cut.containsLine(5), is(true));
 	}
 
 	@Test
-	public void containsLineBeforeStart() throws Exception {
+	public void testContainsLineBeforeStart() throws Exception {
 		HunkRange cut = new HunkRange(5, 7);
 
 		assertThat("Before start is excluded", cut.containsLine(4), is(false));
 	}
 
 	@Test
-	public void containsLineAfterEnd() throws Exception {
+	public void testContainsLineAfterEnd() throws Exception {
 		HunkRange cut = new HunkRange(5, 7);
 
 		assertThat("After end line is excluded", cut.containsLine(25), is(false));
 	}
 
 	@Test
-	public void containsLineOneBeforeEndLine() throws Exception {
+	public void testContainsLineOneBeforeEndLine() throws Exception {
 		HunkRange cut = new HunkRange(5, 7);
 
 		assertThat("One before end line is included", cut.containsLine(11), is(true));
 	}
 
 	@Test
-	public void containsLineEndLine() throws Exception {
+	public void testContainsLineEndLine() throws Exception {
 		HunkRange cut = new HunkRange(5, 7);
 
 		assertThat("End line is excluded", cut.containsLine(12), is(false));
