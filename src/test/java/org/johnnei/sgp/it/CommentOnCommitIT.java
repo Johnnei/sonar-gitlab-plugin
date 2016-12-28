@@ -1,4 +1,4 @@
-package org.johnnei.sgp;
+package org.johnnei.sgp.it;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,8 +10,6 @@ import org.gitlab.api.models.CommitComment;
 import org.hamcrest.collection.IsEmptyCollection;
 import org.hamcrest.core.IsCollectionContaining;
 import org.junit.Test;
-
-import org.johnnei.sgp.it.IntegrationTest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;

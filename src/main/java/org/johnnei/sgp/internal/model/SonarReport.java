@@ -1,6 +1,5 @@
 package org.johnnei.sgp.internal.model;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.Collection;
@@ -8,10 +7,6 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import org.gitlab.api.models.GitlabProject;
-import org.sonar.api.batch.fs.InputComponent;
-import org.sonar.api.batch.fs.InputFile;
-import org.sonar.api.batch.postjob.issue.PostJobIssue;
-import org.sonar.api.scan.filesystem.PathResolver;
 
 import org.johnnei.sgp.internal.sorting.IssueSeveritySorter;
 
@@ -21,7 +16,7 @@ import org.johnnei.sgp.internal.sorting.IssueSeveritySorter;
 public class SonarReport {
 
 	@Nonnull
-	private final Collection<PostJobIssue> issues;
+	private final Collection<MappedIssue> issues;
 
 	@Nonnull
 	private final GitlabProject project;
@@ -32,9 +27,6 @@ public class SonarReport {
 	@Nonnull
 	private File gitBaseDir;
 
-	@Nonnull
-	private PathResolver pathResolver = new PathResolver();
-
 	public SonarReport(@Nonnull Builder builder) {
 		gitBaseDir = Objects.requireNonNull(builder.gitBaseDir, "Git sources are required to be able to create inline comments.");
 		commitSha = Objects.requireNonNull(builder.commitSha, "Commit hash is required to know which commit to comment on.");
@@ -42,18 +34,8 @@ public class SonarReport {
 		issues = Objects.requireNonNull(builder.issues, "Issues are required to be a nonnull collection in order to be able to comment.");
 	}
 
-	public Stream<PostJobIssue> getIssues() {
+	public Stream<MappedIssue> getIssues() {
 		return issues.stream().sorted(new IssueSeveritySorter());
-	}
-
-	@CheckForNull
-	public String getFilePath(@CheckForNull InputComponent inputComponent) {
-		if (inputComponent == null || !inputComponent.isFile()) {
-			return null;
-		}
-
-		InputFile inputFile = (InputFile) inputComponent;
-		return pathResolver.relativePath(gitBaseDir, inputFile.file());
 	}
 
 	@Nonnull
@@ -71,7 +53,7 @@ public class SonarReport {
 		private File gitBaseDir;
 		private String commitSha;
 		private GitlabProject project;
-		private Collection<PostJobIssue> issues;
+		private Collection<MappedIssue> issues;
 
 		public Builder setCommitSha(String commitSha) {
 			this.commitSha = commitSha;
@@ -88,7 +70,7 @@ public class SonarReport {
 			return this;
 		}
 
-		public Builder setIssues(Collection<PostJobIssue> issues) {
+		public Builder setIssues(Collection<MappedIssue> issues) {
 			this.issues = issues;
 			return this;
 		}
