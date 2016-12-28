@@ -2,13 +2,12 @@ package org.johnnei.sgp.internal.gitlab;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.util.stream.Stream;
 
 import org.gitlab.api.GitlabAPI;
-import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
+import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 
 /**
@@ -27,23 +26,12 @@ public class CommitCommenter {
 
 	public void process(SonarReport report) {
 		boolean allCommentsSucceeded = report.getIssues()
-			.flatMap(issue -> mapIssueToFile(report, issue))
 			.map(mappedIssue -> postComment(report, mappedIssue))
 			// All match true
 			.allMatch(result -> result);
 
 		if (!allCommentsSucceeded) {
 			throw new ProcessException("One or more comments failed to be added to the commit.");
-		}
-	}
-
-	private Stream<MappedIssue> mapIssueToFile(SonarReport report, PostJobIssue issue) {
-		String path = report.getFilePath(issue.inputComponent());
-		if (path != null) {
-			return Stream.of(new MappedIssue(issue, path));
-		} else {
-			LOGGER.debug("Failed to find file for \"{}\" in \"{}\"", issue.message(), issue.inputComponent());
-			return Stream.empty();
 		}
 	}
 
@@ -61,26 +49,6 @@ public class CommitCommenter {
 		} catch (IOException e) {
 			LOGGER.warn("Failed to create comment for in {}:{}.", mappedIssue.getPath(), mappedIssue.getIssue().line(), e);
 			return false;
-		}
-	}
-
-	private static class MappedIssue {
-
-		private final PostJobIssue issue;
-
-		private final String path;
-
-		public MappedIssue(PostJobIssue issue, String path) {
-			this.issue = issue;
-			this.path = path;
-		}
-
-		public PostJobIssue getIssue() {
-			return issue;
-		}
-
-		public String getPath() {
-			return path;
 		}
 	}
 }

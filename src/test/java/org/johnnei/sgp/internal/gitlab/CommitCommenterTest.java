@@ -12,6 +12,7 @@ import org.mockito.ArgumentCaptor;
 import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
 
+import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -20,7 +21,6 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -49,9 +49,8 @@ public class CommitCommenterTest {
 		when(issueMock.message()).thenReturn("Remove this violation!");
 		when(issueMock.line()).thenReturn(line);
 
-		when(reportMock.getIssues()).thenReturn(Stream.of(issueMock));
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, path)));
 		when(reportMock.getCommitSha()).thenReturn(hash);
-		when(reportMock.getFilePath(inputComponentMock)).thenReturn(path);
 		when(reportMock.getProject()).thenReturn(projectMock);
 
 		CommitCommenter cut = new CommitCommenter(apiMock);
@@ -69,26 +68,6 @@ public class CommitCommenterTest {
 		);
 
 		assertThat(captor.getValue(), containsString(issueMock.message()));
-	}
-
-	@Test
-	public void testProcessUnmappedFile() throws Exception {
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		SonarReport reportMock = mock(SonarReport.class);
-		PostJobIssue issueMock = mock(PostJobIssue.class);
-		InputComponent inputComponentMock = mock(InputComponent.class);
-
-		when(inputComponentMock.isFile()).thenReturn(false);
-		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
-		when(issueMock.message()).thenReturn("Remove this violation!");
-
-		when(reportMock.getIssues()).thenReturn(Stream.of(issueMock));
-
-		CommitCommenter cut = new CommitCommenter(apiMock);
-
-		cut.process(reportMock);
-
-		verify(apiMock, never()).createCommitComment(anyInt(), anyString(), anyString(), anyString(), anyString(), anyString());
 	}
 
 	@Test
@@ -114,9 +93,8 @@ public class CommitCommenterTest {
 		when(issueMock.message()).thenReturn("Remove this violation!");
 		when(issueMock.line()).thenReturn(line);
 
-		when(reportMock.getIssues()).thenReturn(Stream.of(issueMock));
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, path)));
 		when(reportMock.getCommitSha()).thenReturn(hash);
-		when(reportMock.getFilePath(inputComponentMock)).thenReturn(path);
 		when(reportMock.getProject()).thenReturn(projectMock);
 
 		when(apiMock.createCommitComment(

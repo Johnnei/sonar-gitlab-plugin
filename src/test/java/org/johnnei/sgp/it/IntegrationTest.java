@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import okhttp3.Cookie;
 import okhttp3.CookieJar;
@@ -23,17 +24,19 @@ import okhttp3.Response;
 import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.models.GitlabProject;
 import org.gitlab.api.models.GitlabSession;
-import org.hamcrest.collection.IsEmptyCollection;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeThat;
+import static org.junit.Assert.assertThat;
 
 /**
  * Created by Johnnei on 2016-12-04.
@@ -52,17 +55,15 @@ public abstract class IntegrationTest {
 
 	private static final String GITLAB_HOST = getProperty("gitlab.host", "localhost:80");
 	private static final String GITLAB_URL = String.format("http://%s", GITLAB_HOST);
-	private static final String GITLAB_REPO = String.format(
-		"http://root:%s@%s/root/sgp-it.git",
-		ADMIN_PASSWORD.replaceAll("@", "%40").replaceAll("!", "%21"),
-		GITLAB_HOST
-	);
 	private static final String SONARQUBE_HOST = getProperty("sonarqube.host", "http://localhost:9000");
 	private static final String OS_SHELL = getProperty("os.shell", "/bin/bash");
 	private static final String OS_COMMAND = getProperty("os.command", "-c");
 
 	@Rule
 	public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+	@Rule
+	public TestName testName = new TestName();
 
 	protected GitlabAPI gitlabApi;
 
@@ -82,11 +83,19 @@ public abstract class IntegrationTest {
 		return value;
 	}
 
+	private String getGitlabRepo() {
+		return String.format(
+			"http://root:%s@%s/root/%s.git",
+			ADMIN_PASSWORD.replaceAll("@", "%40").replaceAll("!", "%21"),
+			GITLAB_HOST,
+			project.getName().toLowerCase()
+		);
+	}
+
 	@BeforeClass
 	public static void setUpClass() {
 		LOGGER.info("GitLab Host: {}", GITLAB_HOST);
 		LOGGER.info("GitLab URL: {}", GITLAB_URL);
-		LOGGER.info("GitLab Repo: {}", GITLAB_REPO);
 		LOGGER.info("SonarQube URL: {}", SONARQUBE_HOST);
 	}
 
@@ -95,10 +104,10 @@ public abstract class IntegrationTest {
 		File repo = temporaryFolder.newFolder("repo");
 		commandLine = new CommandLine(OS_SHELL, OS_COMMAND, repo);
 
-		prepareGitRepo(repo);
-
 		ensureAdminCreated();
 		createProject();
+
+		prepareGitRepo(repo);
 	}
 
 	private void prepareGitRepo(File repo) throws IOException {
@@ -115,14 +124,9 @@ public abstract class IntegrationTest {
 			});
 
 		commandLine.startAndAwait("git init");
-		commandLine.startAndAwait("git remote add origin " + GITLAB_REPO);
+		commandLine.startAndAwait("git remote add origin " + getGitlabRepo());
 		commandLine.startAndAwait("git config user.email \"example@example.com\"");
 		commandLine.startAndAwait("git config user.name \"SGP Integration\"");
-	}
-
-	@After
-	public void tearDown() throws Exception {
-		deleteProject();
 	}
 
 	protected Path getTestResource(String pathname) {
@@ -139,11 +143,26 @@ public abstract class IntegrationTest {
 		}
 	}
 
-	protected String gitCommitAll() throws IOException {
-		commandLine.startAndAwait("git add .");
-		commandLine.startAndAwait("git commit -m \"My commit message\"");
+	protected void gitCheckout(String commitHash) throws IOException {
+		commandLine.startAndAwait("git checkout " + commitHash);
+	}
+
+	protected void gitAdd(String paths) throws IOException {
+		commandLine.startAndAwait("git add " + paths);
+	}
+
+	protected String gitCommit() throws IOException {
+		return gitCommit("My commit message");
+	}
+	protected String gitCommit(String message) throws IOException {
+		commandLine.startAndAwait(String.format("git commit -m \"%s\"", message));
 		commandLine.startAndAwait("git push -u origin master");
 		return getLastCommit();
+	}
+
+	protected String gitCommitAll() throws IOException {
+		gitAdd(".");
+		return gitCommit();
 	}
 
 	private String getLastCommit() throws IOException {
@@ -151,6 +170,10 @@ public abstract class IntegrationTest {
 	}
 
 	protected void sonarAnalysis(String commitHash) throws IOException {
+		sonarAnalysis(commitHash, true);
+	}
+
+	protected void sonarAnalysis(String commitHash, boolean incremental) throws IOException {
 		LOGGER.info("Starting SonarQube Analysis.");
 
 		String argument = "mvn -B" +
@@ -164,18 +187,22 @@ public abstract class IntegrationTest {
 			" --debug" +
 			// Enable Sonar debug logging to analyse test failures.
 			" -Dsonar.log.level=DEBUG" +
-			// Run analysis in issues mode in order to process the issues on the scanner side
-			" -Dsonar.analysis.mode=issues" +
 			// The host at which the SonarQube instance with our plugin is running.
-			" -Dsonar.host.url=" + SONARQUBE_HOST +
-			// The host at which our target gitlab instance is running.
-			" -Dsonar.gitlab.uri=" + GITLAB_URL +
-			// The authentication token to access the project within Gitlab
-			" -Dsonar.gitlab.auth.token=" + gitLabAuthToken +
-			// The project to comment on
-			" -Dsonar.gitlab.analyse.project=root/sgp-it" +
-			// The commit we're analysing.
-			" -Dsonar.gitlab.analyse.commit=" + commitHash;
+			" -Dsonar.host.url=" + SONARQUBE_HOST;
+
+		if (incremental) {
+			// Run analysis in issues mode in order to process the issues on the scanner side
+			argument += " -Dsonar.analysis.mode=issues" +
+				// The host at which our target gitlab instance is running.
+				" -Dsonar.gitlab.uri=" + GITLAB_URL +
+				// The authentication token to access the project within Gitlab
+				" -Dsonar.gitlab.auth.token=" + gitLabAuthToken +
+				// The project to comment on
+				" -Dsonar.gitlab.analyse.project=root/" + project.getName() +
+				// The commit we're analysing.
+				" -Dsonar.gitlab.analyse.commit=" + commitHash;
+		}
+
 		commandLine.startAndAwait(argument);
 	}
 
@@ -266,21 +293,17 @@ public abstract class IntegrationTest {
 	}
 
 	private void createProject() throws IOException {
-		LOGGER.info("Ensuring that there is no left over project.");
+		LOGGER.info("Ensuring that there is no duplicate project.");
 
-		List<GitlabProject> projects = gitlabApi.getAllProjects();
-		assumeThat(projects, IsEmptyCollection.empty());
+		String projectName = String.format("sgp-it-%s-%s", this.getClass().getSimpleName(), testName.getMethodName());
+
+		List<String> projects = gitlabApi.getAllProjects().stream()
+			.map(GitlabProject::getName)
+			.collect(Collectors.toList());
+		assertThat("Project with that name already exists. Duplicate test name.", projects, not(hasItem(equalTo(projectName))));
 
 		LOGGER.info("Creating Project");
-		project = gitlabApi.createProject("sgp-it");
+		project = gitlabApi.createProject(projectName);
 		assertNotNull("Failed to create project in GitLab", project);
-	}
-
-	private void deleteProject() throws IOException {
-		LOGGER.debug("Removing project from GitLab.");
-		if (project != null) {
-			gitlabApi.deleteProject(project.getId());
-		}
-		LOGGER.debug("Removing project from SonarQube.");
 	}
 }
