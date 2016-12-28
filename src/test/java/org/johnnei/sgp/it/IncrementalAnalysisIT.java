@@ -24,7 +24,6 @@ public class IncrementalAnalysisIT extends IntegrationTest {
 	 * Tests that when doing two analysis on the same commit that there are no duplicate comments in GitLab.
 	 */
 	@Test
-	@Ignore("To be built in SGP-21")
 	public void testDoubleAnalysis() throws Exception {
 		String commitHash = gitCommitAll();
 		sonarAnalysis(commitHash);
