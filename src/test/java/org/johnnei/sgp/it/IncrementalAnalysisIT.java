@@ -9,8 +9,9 @@ import java.util.stream.Collectors;
 import org.gitlab.api.models.CommitComment;
 import org.hamcrest.collection.IsEmptyCollection;
 import org.hamcrest.core.IsCollectionContaining;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import org.johnnei.sgp.it.framework.IntegrationTest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -31,6 +32,7 @@ public class IncrementalAnalysisIT extends IntegrationTest {
 
 		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commitHash);
 		List<String> comments = commitComments.stream()
+			.filter(comment -> comment.getLine() != null)
 			.map(CommitComment::getNote)
 			.collect(Collectors.toList());
 
@@ -45,6 +47,12 @@ public class IncrementalAnalysisIT extends IntegrationTest {
 			String.format("%s Issues have been reported and thus comments should be there.", messages.size()),
 			comments,
 			IsEmptyCollection.empty()
+		);
+
+		assertThat(
+			"Only 1 summary comment should be created.",
+			commitComments.stream().filter(comment -> comment.getLine() == null).count(),
+			equalTo(1L)
 		);
 	}
 
@@ -69,6 +77,7 @@ public class IncrementalAnalysisIT extends IntegrationTest {
 		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commitHash);
 		int commentCount = commitComments.size();
 		List<String> comments = commitComments.stream()
+			.filter(comment -> comment.getLine() != null)
 			.map(CommitComment::getNote)
 			.collect(Collectors.toList());
 
@@ -88,19 +97,5 @@ public class IncrementalAnalysisIT extends IntegrationTest {
 			comments,
 			IsEmptyCollection.empty()
 		);
-	}
-
-	private void remoteMatchedComment(List<String> comments, String message) {
-		// Remove a single matched comment.
-		Iterator<String> commentsIterator = comments.iterator();
-		while (commentsIterator.hasNext()) {
-			String comment = commentsIterator.next();
-			if (comment.equals(message)) {
-				commentsIterator.remove();
-				return;
-			}
-		}
-
-		throw new IllegalStateException("Matcher passed but didn't remove message.");
 	}
 }

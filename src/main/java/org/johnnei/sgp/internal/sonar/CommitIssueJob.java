@@ -93,7 +93,6 @@ public class CommitIssueJob implements PostJob {
 			.setIssues(issues)
 			.setCommitSha(configuration.getCommitHash())
 			.setProject(configuration.getProject())
-			.setProjectBaseDir(configuration.getGitBaseDir())
 			.build();
 
 		commitCommenter.process(report);

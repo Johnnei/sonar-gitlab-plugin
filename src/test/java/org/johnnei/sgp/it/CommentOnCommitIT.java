@@ -2,14 +2,16 @@ package org.johnnei.sgp.it;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.gitlab.api.models.CommitComment;
+import org.hamcrest.collection.IsCollectionWithSize;
 import org.hamcrest.collection.IsEmptyCollection;
 import org.hamcrest.core.IsCollectionContaining;
 import org.junit.Test;
+
+import org.johnnei.sgp.it.framework.IntegrationTest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -26,6 +28,7 @@ public class CommentOnCommitIT extends IntegrationTest {
 
 		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commitHash);
 		List<String> comments = commitComments.stream()
+			.filter(comment -> comment.getLine() != null)
 			.map(CommitComment::getNote)
 			.collect(Collectors.toList());
 
@@ -43,17 +46,24 @@ public class CommentOnCommitIT extends IntegrationTest {
 		);
 	}
 
-	private void remoteMatchedComment(List<String> comments, String message) {
-		// Remove a single matched comment.
-		Iterator<String> commentsIterator = comments.iterator();
-		while (commentsIterator.hasNext()) {
-			String comment = commentsIterator.next();
-			if (comment.equals(message)) {
-				commentsIterator.remove();
-				return;
-			}
-		}
+	@Test
+	public void testSummaryIsCreated() throws IOException {
+		final String expectedSummary = Files
+			.readAllLines(getTestResource("sonarqube/summary.txt"))
+			.stream()
+			.reduce((a, b) -> a + "\n" + b)
+			.orElseThrow(() -> new IllegalStateException("Missing Summary information"));
 
-		throw new IllegalStateException("Matcher passed but didn't remove message.");
+		String commitHash = gitCommitAll();
+		sonarAnalysis(commitHash);
+
+		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commitHash);
+		List<String> comments = commitComments.stream()
+			.filter(comment -> comment.getLine() == null)
+			.map(CommitComment::getNote)
+			.collect(Collectors.toList());
+
+		assertThat("Only 1 summary comment should be created", comments, IsCollectionWithSize.hasSize(1));
+		assertThat("The summary doesn't match the expected summary.", comments.get(0), equalTo(expectedSummary));
 	}
 }
