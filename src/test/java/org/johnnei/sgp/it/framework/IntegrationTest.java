@@ -1,4 +1,4 @@
-package org.johnnei.sgp.it;
+package org.johnnei.sgp.it.framework;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -167,6 +168,20 @@ public abstract class IntegrationTest {
 
 	private String getLastCommit() throws IOException {
 		return commandLine.startAndAwaitOutput("git log -n 1 --format=%H");
+	}
+
+	protected void remoteMatchedComment(List<String> comments, String message) {
+		// Remove a single matched comment.
+		Iterator<String> commentsIterator = comments.iterator();
+		while (commentsIterator.hasNext()) {
+			String comment = commentsIterator.next();
+			if (comment.equals(message)) {
+				commentsIterator.remove();
+				return;
+			}
+		}
+
+		throw new IllegalStateException("Matcher passed but didn't remove message.");
 	}
 
 	protected void sonarAnalysis(String commitHash) throws IOException {

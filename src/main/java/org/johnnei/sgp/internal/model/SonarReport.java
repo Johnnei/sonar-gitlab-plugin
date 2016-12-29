@@ -1,12 +1,12 @@
 package org.johnnei.sgp.internal.model;
 
 import javax.annotation.Nonnull;
-import java.io.File;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Stream;
 
 import org.gitlab.api.models.GitlabProject;
+import org.sonar.api.batch.rule.Severity;
 
 import org.johnnei.sgp.internal.sorting.IssueSeveritySorter;
 
@@ -24,11 +24,7 @@ public class SonarReport {
 	@Nonnull
 	private final String commitSha;
 
-	@Nonnull
-	private File gitBaseDir;
-
-	public SonarReport(@Nonnull Builder builder) {
-		gitBaseDir = Objects.requireNonNull(builder.gitBaseDir, "Git sources are required to be able to create inline comments.");
+	private SonarReport(@Nonnull Builder builder) {
 		commitSha = Objects.requireNonNull(builder.commitSha, "Commit hash is required to know which commit to comment on.");
 		project = Objects.requireNonNull(builder.project, "Project is required to know where the commit is.");
 		issues = Objects.requireNonNull(builder.issues, "Issues are required to be a nonnull collection in order to be able to comment.");
@@ -36,6 +32,17 @@ public class SonarReport {
 
 	public Stream<MappedIssue> getIssues() {
 		return issues.stream().sorted(new IssueSeveritySorter());
+	}
+
+	/**
+	 * Counts the amount of issues with the given severity.
+	 * @param severity The severity to filter on.
+	 * @return The amount of issues with the given severity.
+	 */
+	public long countIssuesWithSeverity(Severity severity) {
+		return issues.stream()
+			.filter(mappedIssue -> mappedIssue.getIssue().severity() == severity)
+			.count();
 	}
 
 	@Nonnull
@@ -48,9 +55,15 @@ public class SonarReport {
 		return commitSha;
 	}
 
+	/**
+	 * @return The amount of issues reported by SonarQube.
+	 */
+	public int getIssueCount() {
+		return issues.size();
+	}
+
 	public static class Builder {
 
-		private File gitBaseDir;
 		private String commitSha;
 		private GitlabProject project;
 		private Collection<MappedIssue> issues;
@@ -62,11 +75,6 @@ public class SonarReport {
 
 		public Builder setProject(GitlabProject project) {
 			this.project = project;
-			return this;
-		}
-
-		public Builder setProjectBaseDir(File projectBaseDir) {
-			this.gitBaseDir = projectBaseDir;
 			return this;
 		}
 

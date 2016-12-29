@@ -1,4 +1,4 @@
-package org.johnnei.sgp.it;
+package org.johnnei.sgp.it.framework;
 
 import java.io.BufferedReader;
 import java.io.File;
