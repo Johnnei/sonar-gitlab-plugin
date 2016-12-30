@@ -71,9 +71,16 @@ public class CommitIssueJobTest {
 		gitlabApiMock = mock(GitlabAPI.class);
 
 		when(configurationMock.createGitLabConnection()).thenReturn(gitlabApiMock);
-		cut = new CommitIssueJob(configurationMock);
+		cut = new CommitIssueJob(configurationMock) {
+			@Override
+			CommitCommenter createCommenter() {
+				// Initialize API and create commenter
+				super.createCommenter();
+				// But return a mock
+				return commitCommenterMock;
+			}
+		};
 
-		Whitebox.setInternalState(cut, CommitCommenter.class, commitCommenterMock);
 		Whitebox.setInternalState(cut, PathResolver.class, pathResolverMock);
 	}
 

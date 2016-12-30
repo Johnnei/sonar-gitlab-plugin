@@ -213,9 +213,12 @@ public abstract class IntegrationTest {
 				// The authentication token to access the project within Gitlab
 				" -Dsonar.gitlab.auth.token=" + gitLabAuthToken +
 				// The project to comment on
-				" -Dsonar.gitlab.analyse.project=root/" + project.getName() +
+				" -Dsonar.gitlab.analyse.project=root/" + project.getName();
+
+			if (commitHash != null) {
 				// The commit we're analysing.
-				" -Dsonar.gitlab.analyse.commit=" + commitHash;
+				argument += " -Dsonar.gitlab.analyse.commit=" + commitHash;
+			}
 		}
 
 		commandLine.startAndAwait(argument);
