@@ -3,6 +3,7 @@ package org.johnnei.sgp.sonar;
 import org.sonar.api.Plugin;
 import org.sonar.api.Properties;
 import org.sonar.api.Property;
+import org.sonar.api.PropertyType;
 
 import org.johnnei.sgp.internal.sonar.CommitAnalysisBuilder;
 import org.johnnei.sgp.internal.sonar.CommitIssueJob;
@@ -16,7 +17,8 @@ import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
 		key = GitLabPlugin.GITLAB_AUTH_TOKEN,
 		name = "GitLab User Token",
 		description = "The private token or access token of the SonarQube user within the GitLab instance.",
-		project = true
+		project = true,
+		type = PropertyType.PASSWORD
 	),
 	@Property(
 		key = GitLabPlugin.GITLAB_INSTANCE_URL,
