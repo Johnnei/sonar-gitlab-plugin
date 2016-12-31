@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.IOException;
 
 import org.gitlab.api.GitlabAPI;
+import org.gitlab.api.GitlabAPIException;
+import org.gitlab.api.TokenType;
 import org.gitlab.api.models.GitlabProject;
 import org.sonar.api.batch.BatchSide;
 import org.sonar.api.batch.InstantiationStrategy;
@@ -48,7 +50,44 @@ public class GitLabPluginConfiguration {
 	}
 
 	public GitlabAPI createGitLabConnection() {
-		return GitlabAPI.connect(getGitLabUrl(), getGitLabToken());
+		String url = getGitLabUrl();
+		String token = getGitLabToken();
+		if (isBlank(url)) {
+			throw new IllegalArgumentException("GitLab Instance URL property hasn't been set.");
+		}
+		if (isBlank(token)) {
+			throw new IllegalArgumentException("GitLab user token hasn't been set.");
+		}
+
+		GitlabAPI api = createConnection(url, token, TokenType.ACCESS_TOKEN);
+		if (!attemptConnect(api, TokenType.ACCESS_TOKEN.name())) {
+			LOGGER.warn("Failed to authorize with GitLab Access Token. Falling back to less secure usage of private token.");
+			api = createConnection(url, token, TokenType.PRIVATE_TOKEN);
+			if (!attemptConnect(api, TokenType.PRIVATE_TOKEN.name())) {
+				throw new IllegalArgumentException("Failed to authorize user with API.");
+			}
+		}
+
+		return api;
+	}
+
+	private boolean attemptConnect(GitlabAPI api, String tokenType) {
+		try {
+			api.getUser();
+		} catch (GitlabAPIException e) {
+			LOGGER.debug("Failed to authorize with {}.", tokenType, e);
+			if (e.getResponseCode() == 401) {
+				return false;
+			}
+		} catch (IOException e) {
+			throw new IllegalStateException("Failed to connect with GitLab.", e);
+		}
+
+		return true;
+	}
+
+	GitlabAPI createConnection(String url, String token, TokenType tokenType) {
+		return GitlabAPI.connect(url, token, tokenType);
 	}
 
 	public void initialiseProject() throws IOException {
@@ -60,7 +99,7 @@ public class GitLabPluginConfiguration {
 		Stopwatch stopwatch = new Stopwatch();
 		stopwatch.start("Looking up GitLab project.");
 		GitlabAPI gitlabApi = createGitLabConnection();
-		project = gitlabApi.getAllProjects().stream()
+		project = gitlabApi.getProjects().stream()
 			.filter(p -> {
 				String name = String.format("%s/%s", p.getNamespace().getName(), p.getName());
 				LOGGER.debug("Filtering \"{}\" = \"{}\"", name, projectName);
