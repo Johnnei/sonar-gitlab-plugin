@@ -1,5 +1,13 @@
 # Unreleased
 
+# 0.1.0-rc.2 (2016-12-31)
+## Security Changes
+- [SGP-27](https://jira.johnnei.org/browse/SGP-27): Prefer usage of GitLab access tokens.
+- [SGP-28](https://jira.johnnei.org/browse/SGP-28): Mark auth token as password field and documentate security risks.
+
+## Bug Fixes
+- [SGP-29](https://jira.johnnei.org/browse/SGP-29): Only trigger post issue job when the commit hash is supplied.
+
 # 0.1.0-rc.1 (2016-12-30)
 ## New Features
 - [SGP-1](https://jira.johnnei.org/browse/SGP-1): Create comments in GitLab on commits.
