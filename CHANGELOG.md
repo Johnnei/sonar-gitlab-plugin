@@ -1,6 +1,6 @@
 # Unreleased
 
-# 0.1.0-rc.2 (2016-12-31)
+# 0.1.0-rc.2 (2017-01-01)
 ## Security Changes
 - [SGP-27](https://jira.johnnei.org/browse/SGP-27): Prefer usage of GitLab access tokens.
 - [SGP-28](https://jira.johnnei.org/browse/SGP-28): Mark auth token as password field and documentate security risks.
