@@ -1,3 +1,4 @@
 FROM docker:dind
 
-CMD ["dind", "--storage-driver=overlay2" ]
+COPY dockerd-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
