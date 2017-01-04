@@ -51,6 +51,6 @@ RUN echo "org.slf4j.simpleLogger.log.org.apache=info" >> /usr/share/maven/conf/l
 RUN echo "org.slf4j.simpleLogger.log.org.codehaus=info" >> /usr/share/maven/conf/logging/simplelogger.properties
 
 # Link to DIND which should be linked to this container.
-ENV DOCKER_HOST="tcp://fast-dind:2375"
+ENV DOCKER_HOST="tcp://localhost__fast-dind:2375"
 
 CMD "mvn"
