@@ -53,13 +53,26 @@ integration-image:
       - "docker tag $IMAGE_NAME $CI_REGISTRY/$IMAGE_NAME"
       - "docker push $CI_REGISTRY/$IMAGE_NAME"
 
+fast-dind-image:
+    stage: build-images
+    tags: ["deploy"]
+    dependencies: []
+    variables:
+      IMAGE_NAME: "fast-dind:$CI_BUILD_REF"
+    script:
+      - "mvn process-test-resources"
+      - "docker build -t $IMAGE_NAME target/test-classes/docker/fast-dind"
+      - "docker tag $IMAGE_NAME $CI_REGISTRY/$IMAGE_NAME"
+      - "docker push $CI_REGISTRY/$IMAGE_NAME"
+
 .integration-test: &it_template
     image: $CI_REGISTRY/sonar-gitlab-plugin:it-$CI_BUILD_REF
     stage: integration
-    services: ["docker:dind"]
+    services: ["$CI_REGISTRY/fast-dind:$CI_BUILD_REF"]
     dependencies: []
     tags: ["dind"]
     script:
+    - "cat /etc/hosts"
     - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
 
 # Test compatibility with SonarQube Versions
