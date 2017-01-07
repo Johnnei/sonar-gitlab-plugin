@@ -37,31 +37,31 @@ public class CommitIssueJob implements PostJob {
 
 	private final GitLabPluginConfiguration configuration;
 
-	private final CommitCommenter commitCommenter;
-
-	private final GitlabAPI gitlabApi;
+	private GitlabAPI gitlabApi;
 
 	private final PathResolver pathResolver;
 
 	public CommitIssueJob(GitLabPluginConfiguration configuration) {
 		this.configuration = configuration;
 		this.pathResolver = new PathResolver();
-
-		gitlabApi = configuration.createGitLabConnection();
-		commitCommenter = new CommitCommenter(gitlabApi);
 	}
 
 	@Override
 	public void describe(@Nonnull PostJobDescriptor descriptor) {
 		descriptor
 			.name("GitLab Commit Issue Publisher")
-			.requireProperty(GitLabPlugin.GITLAB_AUTH_TOKEN)
-			.requireProperty(GitLabPlugin.GITLAB_COMMIT_HASH)
-			.requireProperty(GitLabPlugin.GITLAB_INSTANCE_URL);
+			.requireProperty(GitLabPlugin.GITLAB_COMMIT_HASH);
+	}
+
+	CommitCommenter createCommenter() {
+		gitlabApi = configuration.createGitLabConnection();
+		return new CommitCommenter(gitlabApi);
 	}
 
 	@Override
 	public void execute(@Nonnull PostJobContext context) {
+		CommitCommenter commitCommenter = createCommenter();
+
 		List<UnifiedDiff> diffs;
 		try {
 			diffs = gitlabApi.getCommitDiffs(

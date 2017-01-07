@@ -7,7 +7,7 @@
   <artifactId>sonar-gitlab-plugin</artifactId>
   <name>SonarQube :: GitLab Plugin</name>
   <packaging>sonar-plugin</packaging>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
   <description>Provide merge request analysis support between GitLab and SonarQube</description>
   <inceptionYear>2016</inceptionYear>
 
