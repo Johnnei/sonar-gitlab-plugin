@@ -1,0 +1,101 @@
+image: maven:3.3.9-jdk-8
+
+variables:
+  DOCKER_DRIVER: overlay2
+
+stages:
+    - build
+    - test
+    - build-images
+    - integration
+    - qa
+
+cache:
+  paths:
+    - /cache/.m2/repository/
+
+build-package:
+    stage: build
+    script: "mvn -B clean package -DskipTests -Ddocker.skip"
+    artifacts:
+      paths:
+      - "target/sonar-gitlab-plugin-*.jar"
+
+quicktests:
+    stage: test
+    script: "mvn -B test --fail-at-end"
+    artifacts:
+      expire_in: 1 week
+      paths:
+      - "target/jacoco.exec"
+
+sonarqube.johnnei.org:
+    stage: qa
+    script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://sonarqube.johnnei.org -Dsonar.branch=$CI_BUILD_REF_NAME"
+    except: ["master"]
+    dependencies: ["quicktests"]
+
+sonarqube.com:
+    stage: qa
+    script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://sonarqube.com -Dsonar.login=$SONAR_TOKEN"
+    only: ["develop"]
+    dependencies: ["quicktests"]
+
+integration-image:
+    stage: build-images
+    tags: ["deploy"]
+    dependencies: []
+    variables:
+      IMAGE_NAME: "sonar-gitlab-plugin:it-$CI_BUILD_REF"
+    script:
+      - "mvn process-test-resources"
+      - "docker build -t $IMAGE_NAME target/test-classes/docker/integration"
+      - "docker tag $IMAGE_NAME $CI_REGISTRY/$IMAGE_NAME"
+      - "docker push $CI_REGISTRY/$IMAGE_NAME"
+
+.integration-test: &it_template
+    image: $CI_REGISTRY/sonar-gitlab-plugin:it-$CI_BUILD_REF
+    stage: integration
+    services: ["docker:dind"]
+    dependencies: []
+    tags: ["dind"]
+    script:
+    - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
+
+# Test compatibility with SonarQube Versions
+SQ-6.2-GL-8.15:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "6.2"
+      GITLAB_VERSION: "8.15.2-ce.0"
+
+SQ-6.1-GL-8.15:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "6.1"
+      GITLAB_VERSION: "8.15.2-ce.0"
+
+SQ-6.0-GL-8.15:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "6.0"
+      GITLAB_VERSION: "8.15.2-ce.0"
+
+# Test compatibility with GitLab versions
+SQ-LTS-GL-8.15:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "lts"
+      GITLAB_VERSION: "8.15.2-ce.0"
+
+SQ-LTS-GL-8.14:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "lts"
+      GITLAB_VERSION: "8.14.5-ce.0"
+
+SQ-LTS-GL-8.13:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "lts"
+      GITLAB_VERSION: "8.13.10-ce.0"

@@ -1,0 +1,8 @@
+SonarQube analysis reported 10 issues.
+- 2 blocker
+- 1 critical
+- 5 major
+- 1 minor
+- 1 info
+
+Watch the comments in this conversation to review them.
