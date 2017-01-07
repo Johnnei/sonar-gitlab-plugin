@@ -1,5 +1,8 @@
 # Unreleased
 
+# 0.1.0 (2017-01-07)
+No changes since last rc.
+
 # 0.1.0-rc.2 (2017-01-01)
 ## Security Changes
 - [SGP-27](https://jira.johnnei.org/browse/SGP-27): Prefer usage of GitLab access tokens.
