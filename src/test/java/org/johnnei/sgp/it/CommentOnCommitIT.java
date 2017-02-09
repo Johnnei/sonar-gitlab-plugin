@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.gitlab.api.models.CommitComment;
 import org.hamcrest.collection.IsCollectionWithSize;
@@ -23,6 +24,7 @@ public class CommentOnCommitIT extends IntegrationTest {
 
 	@Test
 	public void testCommentsAreCreated() throws IOException {
+		createInitialCommit();
 		String commitHash = gitCommitAll();
 		sonarAnalysis(commitHash);
 
@@ -54,6 +56,7 @@ public class CommentOnCommitIT extends IntegrationTest {
 			.reduce((a, b) -> a + "\n" + b)
 			.orElseThrow(() -> new IllegalStateException("Missing Summary information"));
 
+		createInitialCommit();
 		String commitHash = gitCommitAll();
 		sonarAnalysis(commitHash);
 
@@ -65,5 +68,43 @@ public class CommentOnCommitIT extends IntegrationTest {
 
 		assertThat("Only 1 summary comment should be created", comments, IsCollectionWithSize.hasSize(1));
 		assertThat("The summary doesn't match the expected summary.", comments.get(0), equalTo(expectedSummary));
+	}
+
+	@Test
+	public void testCommentsAreCreatedWhenMultipleCommitsAreUsed() throws IOException {
+		gitAdd("src/main/java/org/johnnei/sgp/it/internal/NoIssue.java pom.xml");
+		gitCommit();
+		gitCreateBranch("feature/my-feature");
+
+		gitAdd("src/main/java/org/johnnei/sgp/it/api/sources/Main.java");
+		String firstCommmit = gitCommit();
+		String secondCommit = gitCommitAll();
+
+		// checkout to the initial state to prevent analyse on uncommited files.
+		gitCheckoutBranch("master");
+		sonarAnalysis();
+
+		gitCheckoutBranch("feature/my-feature");
+		sonarAnalysis(secondCommit);
+
+		List<CommitComment> firstCommitComments = gitlabApi.getCommitComments(project.getId(), firstCommmit);
+		List<CommitComment> secondCommitComments = gitlabApi.getCommitComments(project.getId(), secondCommit);
+		List<String> comments = Stream.concat(firstCommitComments.stream(), secondCommitComments.stream())
+			.filter(comment -> comment.getLine() != null)
+			.map(CommitComment::getNote)
+			.collect(Collectors.toList());
+
+		List<String> messages = Files.readAllLines(getTestResource("sonarqube/issues.txt"));
+
+		for (String message : messages) {
+			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
+			remoteMatchedComment(comments, message);
+		}
+
+		assertThat(
+			String.format("%s Issues have been reported and thus comments should be there.", messages.size()),
+			comments,
+			IsEmptyCollection.empty()
+		);
 	}
 }

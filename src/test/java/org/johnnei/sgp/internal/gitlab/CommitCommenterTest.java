@@ -57,7 +57,8 @@ public class CommitCommenterTest {
 
 		when(projectMock.getId()).thenReturn(projectId);
 		when(reportMock.getProject()).thenReturn(projectMock);
-		when(reportMock.getCommitSha()).thenReturn(hash);
+		when(reportMock.getBuildCommitSha()).thenReturn(hash);
+		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
 
 		when(apiMock.getCommitComments(projectId, hash)).thenThrow(new IOException("Test exception path"));
 
@@ -82,8 +83,9 @@ public class CommitCommenterTest {
 		when(issueMock.line()).thenReturn(line);
 		when(issueMock.severity()).thenReturn(Severity.CRITICAL);
 
-		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, path)));
-		when(reportMock.getCommitSha()).thenReturn(hash);
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, hash, path)));
+		when(reportMock.getBuildCommitSha()).thenReturn(hash);
+		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
 		when(reportMock.getProject()).thenReturn(projectMock);
 
 		when(reportMock.countIssuesWithSeverity(Severity.CRITICAL)).thenReturn(1L);
@@ -133,6 +135,7 @@ public class CommitCommenterTest {
 		when(commentMock.getNote()).thenReturn(message);
 
 		CommitComment summaryMock = mock(CommitComment.class);
+		when(summaryMock.getPath()).thenReturn(null);
 		when(summaryMock.getLine()).thenReturn(null);
 		when(summaryMock.getNote()).thenReturn(summary);
 
@@ -145,8 +148,9 @@ public class CommitCommenterTest {
 		when(issueMock.message()).thenReturn(message);
 		when(issueMock.line()).thenReturn(line);
 
-		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, path)));
-		when(reportMock.getCommitSha()).thenReturn(hash);
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, hash, path)));
+		when(reportMock.getBuildCommitSha()).thenReturn(hash);
+		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
 		when(reportMock.getProject()).thenReturn(projectMock);
 
 		CommitCommenter cut = new CommitCommenter(apiMock);
@@ -160,6 +164,62 @@ public class CommitCommenterTest {
 			eq(message),
 			eq(path),
 			eq(Integer.toString(line)),
+			eq("new")
+		);
+		verifyNoMoreInteractions(apiMock);
+	}
+
+	@Test
+	public void testProcessNewIssueOnSecondAnalysis() throws Exception {
+		// On the second analysis a comparison against the Summary should not cause issues.
+		String summary = "SonarQube analysis reported 0 issues.\n\nWatch the comments in this conversation to review them.";
+
+		GitlabAPI apiMock = mock(GitlabAPI.class);
+		GitlabProject projectMock = mock(GitlabProject.class);
+		SonarReport reportMock = mock(SonarReport.class);
+		PostJobIssue issueMock = mock(PostJobIssue.class);
+		InputComponent inputComponentMock = mock(InputComponent.class);
+
+		CommitComment commentMock = mock(CommitComment.class);
+		when(commentMock.getLine()).thenReturn(Integer.toString(line));
+		when(commentMock.getPath()).thenReturn(path);
+		when(commentMock.getNote()).thenReturn(message);
+
+		CommitComment summaryMock = mock(CommitComment.class);
+		when(summaryMock.getPath()).thenReturn(null);
+		when(summaryMock.getLine()).thenReturn(null);
+		when(summaryMock.getNote()).thenReturn(summary);
+
+		when(apiMock.getCommitComments(projectId, hash)).thenReturn(Arrays.asList(commentMock, summaryMock));
+
+		when(projectMock.getId()).thenReturn(projectId);
+
+		when(inputComponentMock.isFile()).thenReturn(true);
+		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
+		when(issueMock.message()).thenReturn(message);
+		when(issueMock.line()).thenReturn(line);
+
+		PostJobIssue newIssueMock = mock(PostJobIssue.class);
+		when(newIssueMock.inputComponent()).thenReturn(inputComponentMock);
+		when(newIssueMock.message()).thenReturn(message);
+		when(newIssueMock.line()).thenReturn(88);
+
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, hash, path), new MappedIssue(newIssueMock, hash, "/not/my/file.java")));
+		when(reportMock.getBuildCommitSha()).thenReturn(hash);
+		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
+		when(reportMock.getProject()).thenReturn(projectMock);
+
+		CommitCommenter cut = new CommitCommenter(apiMock);
+
+		cut.process(reportMock);
+
+		verify(apiMock).getCommitComments(projectId, hash);
+		verify(apiMock).createCommitComment(
+			eq(projectId),
+			eq(hash),
+			eq(message),
+			eq("/not/my/file.java"),
+			eq(Integer.toString(88)),
 			eq("new")
 		);
 		verifyNoMoreInteractions(apiMock);
@@ -188,8 +248,9 @@ public class CommitCommenterTest {
 		when(issueMock.message()).thenReturn("Remove this violation!");
 		when(issueMock.line()).thenReturn(line);
 
-		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, path)));
-		when(reportMock.getCommitSha()).thenReturn(hash);
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, hash, path)));
+		when(reportMock.getBuildCommitSha()).thenReturn(hash);
+		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
 		when(reportMock.getProject()).thenReturn(projectMock);
 
 		when(apiMock.createCommitComment(
@@ -229,9 +290,10 @@ public class CommitCommenterTest {
 		when(issueMock.message()).thenReturn("Remove this violation!");
 		when(issueMock.line()).thenReturn(line);
 
-		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, path)));
-		when(reportMock.getCommitSha()).thenReturn(hash);
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, hash, path)));
+		when(reportMock.getBuildCommitSha()).thenReturn(hash);
 		when(reportMock.getProject()).thenReturn(projectMock);
+		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
 
 		when(apiMock.createCommitComment(
 			anyInt(),

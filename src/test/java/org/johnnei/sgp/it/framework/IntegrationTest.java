@@ -74,6 +74,8 @@ public abstract class IntegrationTest {
 
 	private String gitLabAuthToken;
 
+	private String branch;
+
 	private static String getProperty(String key, String defaultValue) {
 		String value = System.getProperty(key);
 		if (value == null || value.trim().isEmpty() || value.contains("$")) {
@@ -104,6 +106,7 @@ public abstract class IntegrationTest {
 	public void setUp() throws Exception {
 		File repo = temporaryFolder.newFolder("repo");
 		commandLine = new CommandLine(OS_SHELL, OS_COMMAND, repo);
+		branch = "master";
 
 		ensureAdminCreated();
 		createProject();
@@ -130,6 +133,15 @@ public abstract class IntegrationTest {
 		commandLine.startAndAwait("git config user.name \"SGP Integration\"");
 	}
 
+	/**
+	 * Commits the GIT ignore file as the root commit.
+	 */
+	protected void createInitialCommit() throws IOException {
+		gitAdd(".gitignore");
+		gitCommit();
+		gitCreateBranch("feature");
+	}
+
 	protected Path getTestResource(String pathname) {
 		URL url = IntegrationTest.class.getResource("/" + pathname);
 		if (url == null) {
@@ -142,6 +154,16 @@ public abstract class IntegrationTest {
 		} catch (URISyntaxException e) {
 			throw new IllegalArgumentException("Invalid resource path", e);
 		}
+	}
+
+	protected void gitCreateBranch(String branch) throws IOException {
+		this.branch = branch;
+		commandLine.startAndAwait(String.format("git checkout -b %s", branch));
+	}
+
+	protected void gitCheckoutBranch(String branch) throws IOException {
+		this.branch = branch;
+		gitCheckout(branch);
 	}
 
 	protected void gitCheckout(String commitHash) throws IOException {
@@ -157,7 +179,7 @@ public abstract class IntegrationTest {
 	}
 	protected String gitCommit(String message) throws IOException {
 		commandLine.startAndAwait(String.format("git commit -m \"%s\"", message));
-		commandLine.startAndAwait("git push -u origin master");
+		commandLine.startAndAwait(String.format("git push -u origin %s", branch));
 		return getLastCommit();
 	}
 
@@ -184,11 +206,15 @@ public abstract class IntegrationTest {
 		throw new IllegalStateException("Matcher passed but didn't remove message.");
 	}
 
+	protected void sonarAnalysis() throws IOException {
+		sonarAnalysis(null, false);
+	}
+
 	protected void sonarAnalysis(String commitHash) throws IOException {
 		sonarAnalysis(commitHash, true);
 	}
 
-	protected void sonarAnalysis(String commitHash, boolean incremental) throws IOException {
+	private void sonarAnalysis(String commitHash, boolean incremental) throws IOException {
 		LOGGER.info("Starting SonarQube Analysis.");
 
 		String argument = "mvn -B" +

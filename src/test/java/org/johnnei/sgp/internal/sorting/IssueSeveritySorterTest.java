@@ -15,6 +15,8 @@ public class IssueSeveritySorterTest {
 
 	private IssueSeveritySorter cut = new IssueSeveritySorter();
 
+	private String commitsha = "";
+
 	@Test
 	public void testCompareEqual() throws Exception {
 		PostJobIssue issueOne = mock(PostJobIssue.class);
@@ -25,7 +27,7 @@ public class IssueSeveritySorterTest {
 
 		assertThat(
 			"The same severity should report that they are equal.",
-			cut.compare(new MappedIssue(issueOne, ""), new MappedIssue(issueTwo, "")),
+			cut.compare(new MappedIssue(issueOne, commitsha, ""), new MappedIssue(issueTwo, commitsha, "")),
 			equalTo(0)
 		);
 	}
@@ -40,7 +42,7 @@ public class IssueSeveritySorterTest {
 
 		assertThat(
 			"The same severity should report that they are equal.",
-			cut.compare(new MappedIssue(issueOne, ""), new MappedIssue(issueTwo, "")),
+			cut.compare(new MappedIssue(issueOne, commitsha, ""), new MappedIssue(issueTwo, commitsha, "")),
 			equalTo(-1)
 		);
 	}
@@ -55,7 +57,7 @@ public class IssueSeveritySorterTest {
 
 		assertThat(
 			"The same severity should report that they are equal.",
-			cut.compare(new MappedIssue(issueOne, ""), new MappedIssue(issueTwo, "")),
+			cut.compare(new MappedIssue(issueOne, commitsha, ""), new MappedIssue(issueTwo, commitsha, "")),
 			equalTo(1)
 		);
 	}

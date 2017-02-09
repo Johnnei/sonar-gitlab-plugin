@@ -26,6 +26,7 @@ public class IncrementalAnalysisIT extends IntegrationTest {
 	 */
 	@Test
 	public void testDoubleAnalysis() throws Exception {
+		createInitialCommit();
 		String commitHash = gitCommitAll();
 		sonarAnalysis(commitHash);
 		sonarAnalysis(commitHash);
@@ -58,6 +59,7 @@ public class IncrementalAnalysisIT extends IntegrationTest {
 
 	@Test
 	public void testIncrementalAnalysis() throws Exception {
+		createInitialCommit();
 		gitAdd("src/main/java/org/johnnei/sgp/it/api/sources/Main.java");
 		gitAdd("pom.xml");
 		String commitHash = gitCommit("Initial commit.");

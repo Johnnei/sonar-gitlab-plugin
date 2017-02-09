@@ -1,8 +1,6 @@
 package org.johnnei.sgp.internal.sonar;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -15,7 +13,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.powermock.reflect.Whitebox;
 import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.fs.InputFile;
@@ -26,25 +27,22 @@ import org.sonar.api.scan.filesystem.PathResolver;
 import org.sonar.api.utils.log.LogTester;
 
 import org.johnnei.sgp.internal.gitlab.CommitCommenter;
-import org.johnnei.sgp.internal.gitlab.ProcessException;
+import org.johnnei.sgp.internal.gitlab.DiffFetcher;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
+import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.isA;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Created by Johnnei on 2016-12-21.
- */
+@RunWith(MockitoJUnitRunner.class)
 public class CommitIssueJobTest {
 
 	@Rule
@@ -55,23 +53,25 @@ public class CommitIssueJobTest {
 
 	private CommitIssueJob cut;
 
+	@Mock
 	private CommitCommenter commitCommenterMock;
 
+	@Mock
 	private GitLabPluginConfiguration configurationMock;
 
+	@Mock
 	private PathResolver pathResolverMock;
 
+	@Mock
 	private GitlabAPI gitlabApiMock;
+
+	@Mock
+	private DiffFetcher diffFetcherMock;
 
 	@Before
 	public void setUp() {
-		commitCommenterMock = mock(CommitCommenter.class);
-		configurationMock = mock(GitLabPluginConfiguration.class);
-		pathResolverMock = mock(PathResolver.class);
-		gitlabApiMock = mock(GitlabAPI.class);
-
 		when(configurationMock.createGitLabConnection()).thenReturn(gitlabApiMock);
-		cut = new CommitIssueJob(configurationMock) {
+		cut = new CommitIssueJob(diffFetcherMock, configurationMock) {
 			@Override
 			CommitCommenter createCommenter() {
 				// Initialize API and create commenter
@@ -95,24 +95,6 @@ public class CommitIssueJobTest {
 
 		verify(postJobDescriptorMock).name("GitLab Commit Issue Publisher");
 		verify(postJobDescriptorMock, atLeastOnce()).requireProperty(anyString());
-	}
-
-	@Test
-	public void testExecuteThrowProcessExceptionOnApiFailure() throws Exception {
-		thrown.expect(ProcessException.class);
-		thrown.expectCause(isA(IOException.class));
-		thrown.expectMessage("commit diff");
-
-		int projectId = 42;
-		String hash = "a2b6";
-
-		GitlabProject projectMock = mock(GitlabProject.class);
-		when(projectMock.getId()).thenReturn(projectId);
-
-		when(configurationMock.getProject()).thenReturn(projectMock);
-		when(configurationMock.getCommitHash()).thenReturn(hash);
-		when(gitlabApiMock.getCommitDiffs(projectId, hash)).thenThrow(new IOException("Test failure path"));
-		cut.execute(mock(PostJobContext.class));
 	}
 
 	@Test
@@ -145,11 +127,7 @@ public class CommitIssueJobTest {
 		when(commitDiffOne.getDiff()).thenReturn(diff);
 		when(commitDiffOne.getNewPath()).thenReturn("src/Main.java");
 
-		// Add a deleted file for coverage.
-		GitlabCommitDiff commitDiffTwo = mock(GitlabCommitDiff.class);
-		when(commitDiffTwo.getDeletedFile()).thenReturn(true);
-
-		when(gitlabApiMock.getCommitDiffs(projectId, hash)).thenReturn(Arrays.asList(commitDiffOne, commitDiffTwo));
+		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Collections.singletonList(new UnifiedDiff(hash, commitDiffOne)));
 
 		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
 		when(configurationMock.getGitBaseDir()).thenReturn(new File("."));
@@ -164,9 +142,8 @@ public class CommitIssueJobTest {
 
 		SonarReport report = reportCaptor.getValue();
 		assertThat("Project must not have changed", report.getProject(), equalTo(projectMock));
-		assertThat("Commit sha must not have changed", report.getCommitSha(), equalTo(hash));
+		assertThat("Commit sha must not have changed", report.getBuildCommitSha(), equalTo(hash));
 		assertThat("The iterable of 1 issue should have result in a stream of 1 issue", report.getIssues().count(), equalTo(1L));
-		verify(commitDiffTwo, never()).getDiff();
 	}
 
 	@Test
@@ -179,7 +156,7 @@ public class CommitIssueJobTest {
 		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
 		when(issueMock.message()).thenReturn("Remove this violation!");
 
-		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, "")));
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, "", "")));
 		String hash = "a2b4";
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 
