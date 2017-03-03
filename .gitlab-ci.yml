@@ -55,6 +55,7 @@ integration-image:
       IMAGE_NAME: "johnnei/sonar-gitlab-plugin:it-$CI_BUILD_REF"
     script:
       - "mvn process-test-resources"
+      - "docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY"
       - "docker build -t $IMAGE_NAME target/test-classes/docker/integration"
       - "docker tag $IMAGE_NAME $CI_REGISTRY/$IMAGE_NAME"
       - "docker push $CI_REGISTRY/$IMAGE_NAME"
@@ -66,7 +67,8 @@ integration-image:
     dependencies: []
     tags: ["dind"]
     script:
-    - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
+      - "docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY"
+      - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
 
 # Test compatibility with SonarQube Versions
 SQ-6.2-GL-8.15:
