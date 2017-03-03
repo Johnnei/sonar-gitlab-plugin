@@ -52,7 +52,7 @@ integration-image:
     tags: ["deploy"]
     dependencies: []
     variables:
-      IMAGE_NAME: "sonar-gitlab-plugin:it-$CI_BUILD_REF"
+      IMAGE_NAME: "johnnei/sonar-gitlab-plugin:it-$CI_BUILD_REF"
     script:
       - "mvn process-test-resources"
       - "docker build -t $IMAGE_NAME target/test-classes/docker/integration"
@@ -60,7 +60,7 @@ integration-image:
       - "docker push $CI_REGISTRY/$IMAGE_NAME"
 
 .integration-test: &it_template
-    image: $CI_REGISTRY/sonar-gitlab-plugin:it-$CI_BUILD_REF
+    image: $CI_REGISTRY/johnnei/sonar-gitlab-plugin:it-$CI_BUILD_REF
     stage: integration
     services: ["docker:dind"]
     dependencies: []
