@@ -67,7 +67,7 @@ integration-image:
     dependencies: []
     tags: ["dind"]
     script:
-      - "docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY"
+      - "docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN -e docker@johnnei.org $CI_REGISTRY"
       - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
 
 # Test compatibility with SonarQube Versions
