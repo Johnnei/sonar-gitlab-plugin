@@ -58,7 +58,15 @@ public class UnifiedDiff {
 			throw new IllegalArgumentException("Failed to parse hunk header: " + hunkHeader);
 		}
 
-		return new HunkRange(Integer.parseInt(matcher.group(1)), Integer.parseInt(matcher.group(2)));
+		int begin = Integer.parseInt(matcher.group(1));
+		int lines = 1;
+
+		// The second group is not mandatory, I've only found cases in which it failed to on addition with size 1 so default the lines to 1.
+		if (matcher.group(2) != null) {
+			lines = Integer.parseInt(matcher.group(2));
+		}
+
+		return new HunkRange(begin, lines);
 	}
 
 	public Collection<HunkRange> getRanges() {
