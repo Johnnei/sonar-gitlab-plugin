@@ -9,15 +9,22 @@ public class MappedIssue {
 
 	private final PostJobIssue issue;
 
+	private final String commitSha;
+
 	private final String path;
 
-	public MappedIssue(PostJobIssue issue, String path) {
+	public MappedIssue(PostJobIssue issue, String commitSha, String path) {
 		this.issue = issue;
+		this.commitSha = commitSha;
 		this.path = path;
 	}
 
 	public PostJobIssue getIssue() {
 		return issue;
+	}
+
+	public String getCommitSha() {
+		return commitSha;
 	}
 
 	public String getPath() {

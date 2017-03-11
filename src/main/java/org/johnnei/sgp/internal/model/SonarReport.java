@@ -22,16 +22,20 @@ public class SonarReport {
 	private final GitlabProject project;
 
 	@Nonnull
-	private final String commitSha;
+	private final String buildCommitSha;
 
 	private SonarReport(@Nonnull Builder builder) {
-		commitSha = Objects.requireNonNull(builder.commitSha, "Commit hash is required to know which commit to comment on.");
+		buildCommitSha = Objects.requireNonNull(builder.buildCommitSha, "Commit hash is required to know which commit to comment on.");
 		project = Objects.requireNonNull(builder.project, "Project is required to know where the commit is.");
 		issues = Objects.requireNonNull(builder.issues, "Issues are required to be a nonnull collection in order to be able to comment.");
 	}
 
 	public Stream<MappedIssue> getIssues() {
 		return issues.stream().sorted(new IssueSeveritySorter());
+	}
+
+	public Stream<String> getCommitShas() {
+		return issues.stream().map(MappedIssue::getCommitSha).distinct();
 	}
 
 	/**
@@ -51,8 +55,8 @@ public class SonarReport {
 	}
 
 	@Nonnull
-	public String getCommitSha() {
-		return commitSha;
+	public String getBuildCommitSha() {
+		return buildCommitSha;
 	}
 
 	/**
@@ -64,12 +68,12 @@ public class SonarReport {
 
 	public static class Builder {
 
-		private String commitSha;
+		private String buildCommitSha;
 		private GitlabProject project;
 		private Collection<MappedIssue> issues;
 
-		public Builder setCommitSha(String commitSha) {
-			this.commitSha = commitSha;
+		public Builder setBuildCommitSha(String buildCommitSha) {
+			this.buildCommitSha = buildCommitSha;
 			return this;
 		}
 

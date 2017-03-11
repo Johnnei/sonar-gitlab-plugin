@@ -22,7 +22,6 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class GitLabPluginConfigurationTest {
@@ -62,6 +61,13 @@ public class GitLabPluginConfigurationTest {
 		String hash = "a4b8";
 		when(settingsMock.getString("sonar.gitlab.analyse.commit")).thenReturn(hash);
 		assertThat("Invalid hash has been returned. Value from settings should be used.", cut.getCommitHash(), equalTo(hash));
+	}
+
+	@Test
+	public void testGetBaseBranch() {
+		String baseBranch = "develop";
+		when(settingsMock.getString("sonar.gitlab.analyse.base")).thenReturn(baseBranch);
+		assertThat("Invalid branch has been returned. Value from settings should be used.", cut.getBaseBranch(), equalTo(baseBranch));
 	}
 
 	@Test

@@ -129,6 +129,10 @@ public class GitLabPluginConfiguration {
 		return settings.getString(GitLabPlugin.GITLAB_COMMIT_HASH);
 	}
 
+	public String getBaseBranch() {
+		return settings.getString(GitLabPlugin.GITLAB_BASE_BRANCH);
+	}
+
 	private static boolean isNotBlank(@CheckForNull String string) {
 		return !isBlank(string);
 	}

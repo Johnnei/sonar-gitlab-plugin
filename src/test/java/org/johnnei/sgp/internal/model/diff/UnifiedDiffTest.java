@@ -24,7 +24,7 @@ public class UnifiedDiffTest {
 		when(diff.getOldPath()).thenReturn("web/src/test/resources/stall-recipes/iron_monger.json");
 		when(diff.getDiff()).thenReturn("--- /dev/null\n+++ b/web/src/test/resources/stall-recipes/iron_monger.json\n@@ -0,0 +1 @@\n+[]\n");
 
-		UnifiedDiff cut = new UnifiedDiff(diff);
+		UnifiedDiff cut = new UnifiedDiff(null, diff);
 
 		assertThat("Path should be the new path", cut.getFilepath(), equalTo("web/src/test/resources/stall-recipes/iron_monger.json"));
 		assertThat("Only 1 hunk should be found", cut.getRanges(), hasSize(1));
@@ -43,7 +43,7 @@ public class UnifiedDiffTest {
 		when(diff.getOldPath()).thenReturn("business/pom.xml");
 		when(diff.getDiff()).thenReturn("--- a/business/pom.xml\n+++ b/business/pom.xml\n@@ -1,10 +1,9 @@\n-<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n-         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n+<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n   <modelVersion>4.0.0</modelVersion>\n   <parent>\n     <groupId>org.johnnei.ypp</groupId>\n     <artifactId>stallmanagement</artifactId>\n-    <version>1.4.0-SNAPSHOT</version>\n+    <version>1.4.0</version>\n   </parent>\n \n   <artifactId>business</artifactId>\n");
 
-		UnifiedDiff cut = new UnifiedDiff(diff);
+		UnifiedDiff cut = new UnifiedDiff(null, diff);
 
 		assertThat("Path should be the new path", cut.getFilepath(), equalTo("business/pom.xml"));
 		assertThat("Only 1 hunk should be found", cut.getRanges(), hasSize(1));

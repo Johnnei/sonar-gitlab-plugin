@@ -5,6 +5,7 @@ import org.sonar.api.Properties;
 import org.sonar.api.Property;
 import org.sonar.api.PropertyType;
 
+import org.johnnei.sgp.internal.gitlab.DiffFetcher;
 import org.johnnei.sgp.internal.sonar.CommitAnalysisBuilder;
 import org.johnnei.sgp.internal.sonar.CommitIssueJob;
 import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
@@ -38,6 +39,13 @@ import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
 		name = "Git commit hash to analyse",
 		description = "The commit which will be considered responsible for all new issues",
 		global = false
+	),
+	@Property(
+		key = GitLabPlugin.GITLAB_BASE_BRANCH,
+		name = "Git base branch",
+		description = "The source branch of the analysed branch. (Ex. with GitFlow this would be develop)",
+		defaultValue = "master",
+		project = true
 	)
 })
 public class GitLabPlugin implements Plugin {
@@ -46,12 +54,14 @@ public class GitLabPlugin implements Plugin {
 	public static final String GITLAB_AUTH_TOKEN = "sonar.gitlab.auth.token";
 	public static final String GITLAB_PROJECT_NAME = "sonar.gitlab.analyse.project";
 	public static final String GITLAB_COMMIT_HASH = "sonar.gitlab.analyse.commit";
+	public static final String GITLAB_BASE_BRANCH = "sonar.gitlab.analyse.base";
 
 	@Override
 	public void define(Context context) {
 		context
 			.addExtension(GitLabPluginConfiguration.class)
 			.addExtension(CommitAnalysisBuilder.class)
+			.addExtension(DiffFetcher.class)
 			.addExtension(CommitIssueJob.class);
 	}
 }

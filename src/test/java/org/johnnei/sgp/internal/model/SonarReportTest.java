@@ -26,9 +26,9 @@ public class SonarReportTest {
 		when(minorIssueMock.severity()).thenReturn(Severity.MINOR);
 
 		cut = new SonarReport.Builder()
-			.setCommitSha("a2b4")
+			.setBuildCommitSha("a2b4")
 			.setProject(mock(GitlabProject.class))
-			.setIssues(Arrays.asList(new MappedIssue(criticalIssueMock, ""), new MappedIssue(minorIssueMock, "")))
+			.setIssues(Arrays.asList(new MappedIssue(criticalIssueMock, "a2b4", ""), new MappedIssue(minorIssueMock, "a3b4", "")))
 			.build();
 	}
 
@@ -44,6 +44,32 @@ public class SonarReportTest {
 	@Test
 	public void testGetIssueCount() throws Exception {
 		assertThat("2 issues were in the collection.", cut.getIssueCount(), equalTo(2));
+	}
+
+	@Test
+	public void testGetCommitShas() throws Exception {
+		assertThat("2 issues were in the collection.", cut.getCommitShas().count(), equalTo(2L));
+	}
+
+	@Test
+	public void testGetCommitShasUnique() throws Exception {
+		PostJobIssue criticalIssueMock = mock(PostJobIssue.class);
+		PostJobIssue minorIssueMock = mock(PostJobIssue.class);
+
+		when(criticalIssueMock.severity()).thenReturn(Severity.CRITICAL);
+		when(minorIssueMock.severity()).thenReturn(Severity.MINOR);
+
+		cut = new SonarReport.Builder()
+			.setBuildCommitSha("a2b4")
+			.setProject(mock(GitlabProject.class))
+			.setIssues(Arrays.asList(
+				new MappedIssue(criticalIssueMock, "a2b4", ""),
+				new MappedIssue(minorIssueMock, "a3b4", ""),
+				new MappedIssue(minorIssueMock, "a3b4", ""))
+			)
+			.build();
+
+		assertThat("2 issues were in the collection.", cut.getCommitShas().count(), equalTo(2L));
 	}
 
 }

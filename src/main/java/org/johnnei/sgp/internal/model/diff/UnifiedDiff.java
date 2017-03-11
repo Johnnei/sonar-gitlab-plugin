@@ -28,10 +28,13 @@ public class UnifiedDiff {
 
 	private final String filepath;
 
+	private final String commitSha;
+
 	private final Collection<HunkRange> ranges;
 
-	public UnifiedDiff(GitlabCommitDiff commitDiff) {
+	public UnifiedDiff(String commitSha, GitlabCommitDiff commitDiff) {
 		this.ranges = new ArrayList<>();
+		this.commitSha = commitSha;
 		this.filepath = commitDiff.getNewPath();
 
 		parseDiff(commitDiff.getDiff());
@@ -67,6 +70,10 @@ public class UnifiedDiff {
 		}
 
 		return new HunkRange(begin, lines);
+	}
+
+	public String getCommitSha() {
+		return commitSha;
 	}
 
 	public Collection<HunkRange> getRanges() {
