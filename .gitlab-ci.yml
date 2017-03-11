@@ -2,6 +2,7 @@ image: maven:3.3.9-jdk-8
 
 variables:
   DOCKER_DRIVER: overlay2
+  MAVEN_OPTS: -Dmaven.repo.local=/cache/.repository
 
 stages:
     - build
@@ -9,10 +10,6 @@ stages:
     - build-images
     - integration
     - qa
-
-cache:
-  paths:
-    - /cache/.m2/repository/
 
 build-package:
     stage: build
@@ -53,6 +50,7 @@ integration-image:
     dependencies: []
     variables:
       IMAGE_NAME: "johnnei/sonar-gitlab-plugin:it-$CI_BUILD_REF"
+      MAVEN_OPTS: ""
     script:
       - "mvn process-test-resources"
       - "docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY"
