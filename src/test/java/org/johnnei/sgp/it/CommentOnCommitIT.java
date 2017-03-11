@@ -49,6 +49,23 @@ public class CommentOnCommitIT extends IntegrationTest {
 	}
 
 	@Test
+	public void testCommentIsCreatedForFileIssues() throws Exception {
+		createInitialCommit();
+		String commit = gitCommitAll();
+
+		// Enable violations on the TAB characters which I do use.
+		try (AutoCloseable ignored = enableSonarqubeRule("squid:S00105")) {
+			sonarAnalysis(commit);
+		}
+
+		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commit);
+		assertThat("File issues should have been reported.", commitComments.stream()
+			.filter(comment -> comment.getLine() == null)
+			.map(CommitComment::getNote)
+			.anyMatch(comment -> comment.contains("tab")));
+	}
+
+	@Test
 	public void testSummaryIsCreated() throws IOException {
 		final String expectedSummary = Files
 			.readAllLines(getTestResource("sonarqube/summary.txt"))

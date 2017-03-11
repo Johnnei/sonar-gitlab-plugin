@@ -15,12 +15,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.Cookie;
 import okhttp3.CookieJar;
+import okhttp3.Credentials;
 import okhttp3.FormBody;
 import okhttp3.HttpUrl;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.models.GitlabProject;
@@ -33,15 +37,15 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.johnnei.sgp.it.framework.sonarqube.QualityProfile;
+import org.johnnei.sgp.it.framework.sonarqube.SearchQualityProfiles;
+
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
-/**
- * Created by Johnnei on 2016-12-04.
- */
 public abstract class IntegrationTest {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTest.class);
@@ -59,6 +63,8 @@ public abstract class IntegrationTest {
 	private static final String SONARQUBE_HOST = getProperty("sonarqube.host", "http://localhost:9000");
 	private static final String OS_SHELL = getProperty("os.shell", "/bin/bash");
 	private static final String OS_COMMAND = getProperty("os.command", "-c");
+
+	private static final ObjectMapper MAPPER = new ObjectMapper();
 
 	@Rule
 	public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -204,6 +210,52 @@ public abstract class IntegrationTest {
 		}
 
 		throw new IllegalStateException("Matcher passed but didn't remove message.");
+	}
+
+	protected AutoCloseable enableSonarqubeRule(String ruleKey) throws IOException {
+		String profile = getQualityProfile();
+
+		Request enableRequest = new Request.Builder()
+			.url(String.format(SONARQUBE_HOST + "/api/qualityprofiles/activate_rule?profile_key=%s&rule_key=%s", profile, ruleKey))
+			.header("Authorization", Credentials.basic("admin", "admin"))
+			.post(RequestBody.create(MediaType.parse("application/json"), ""))
+			.build();
+
+
+		OkHttpClient client = new OkHttpClient();
+
+		String result = client.newCall(enableRequest).execute().body().string();
+
+		LOGGER.debug("Enabled {} on {}: {}", ruleKey, profile, result);
+
+		return () -> disableSonarqubeRule(client, profile, ruleKey);
+	}
+
+	private void disableSonarqubeRule(OkHttpClient client, String profile, String ruleKey) throws IOException {
+		Request disableRequest = new Request.Builder()
+			.url(String.format(SONARQUBE_HOST + "/api/qualityprofiles/deactivate_rule?profile_key=%s&rule_key=%s", profile, ruleKey))
+			.header("Authorization", Credentials.basic("admin", "admin"))
+			.post(RequestBody.create(MediaType.parse("application/json"), ""))
+			.build();
+
+		String result = client.newCall(disableRequest).execute().body().string();
+
+		LOGGER.debug("Disabled {} on {}: {}", ruleKey, profile, result);
+	}
+
+	private String getQualityProfile() throws IOException {
+		Request profileRequest = new Request.Builder()
+			.url(SONARQUBE_HOST + "/api/qualityprofiles/search?language=java")
+			.build();
+
+		OkHttpClient client = new OkHttpClient();
+
+		return MAPPER.readValue(client.newCall(profileRequest).execute().body().string(), SearchQualityProfiles.class)
+			.getProfiles()
+			.stream()
+			.map(QualityProfile::getKey)
+			.findFirst()
+			.orElseThrow(() -> new IllegalStateException("Failed to find Java Quality Profile."));
 	}
 
 	protected void sonarAnalysis() throws IOException {

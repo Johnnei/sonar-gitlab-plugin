@@ -126,4 +126,5 @@ public class CommitIssueJob implements PostJob {
 			.filter(diff -> diff.getRanges().stream().anyMatch(range -> range.containsLine(issue.line())))
 			.findAny();
 	}
+
 }
