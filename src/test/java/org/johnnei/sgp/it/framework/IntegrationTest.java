@@ -8,27 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.Cookie;
-import okhttp3.CookieJar;
-import okhttp3.Credentials;
-import okhttp3.FormBody;
-import okhttp3.HttpUrl;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.models.GitlabProject;
-import org.gitlab.api.models.GitlabSession;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -37,26 +19,13 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.johnnei.sgp.it.framework.sonarqube.QualityProfile;
-import org.johnnei.sgp.it.framework.sonarqube.SearchQualityProfiles;
-
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.core.IsCollectionContaining.hasItem;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import org.johnnei.sgp.it.framework.git.GitSupport;
+import org.johnnei.sgp.it.framework.gitlab.GitLabSupport;
+import org.johnnei.sgp.it.framework.sonarqube.SonarQubeSupport;
 
 public abstract class IntegrationTest {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTest.class);
-
-	private static final String ADMIN_PASSWORD = "Test1234@!";
-
-	private static final Pattern INPUT_FIELD = Pattern.compile("<input(.*?)>");
-
-	private static final Pattern NAME_ATTRIBUTE = Pattern.compile("name=\"(.*?)\"");
-
-	private static final Pattern VALUE_ATTRIBUTE = Pattern.compile("value=\"(.*?)\"");
 
 	private static final String GITLAB_HOST = getProperty("gitlab.host", "localhost:80");
 	private static final String GITLAB_URL = String.format("http://%s", GITLAB_HOST);
@@ -64,7 +33,11 @@ public abstract class IntegrationTest {
 	private static final String OS_SHELL = getProperty("os.shell", "/bin/bash");
 	private static final String OS_COMMAND = getProperty("os.command", "-c");
 
-	private static final ObjectMapper MAPPER = new ObjectMapper();
+	private final GitLabSupport gitlab = new GitLabSupport(GITLAB_HOST, GITLAB_URL);
+
+	private SonarQubeSupport sonarqube;
+
+	private GitSupport git;
 
 	@Rule
 	public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -72,15 +45,7 @@ public abstract class IntegrationTest {
 	@Rule
 	public TestName testName = new TestName();
 
-	protected GitlabAPI gitlabApi;
-
-	protected GitlabProject project;
-
 	private CommandLine commandLine;
-
-	private String gitLabAuthToken;
-
-	private String branch;
 
 	private static String getProperty(String key, String defaultValue) {
 		String value = System.getProperty(key);
@@ -90,15 +55,6 @@ public abstract class IntegrationTest {
 		}
 
 		return value;
-	}
-
-	private String getGitlabRepo() {
-		return String.format(
-			"http://root:%s@%s/root/%s.git",
-			ADMIN_PASSWORD.replaceAll("@", "%40").replaceAll("!", "%21"),
-			GITLAB_HOST,
-			project.getName().toLowerCase()
-		);
 	}
 
 	@BeforeClass
@@ -112,10 +68,11 @@ public abstract class IntegrationTest {
 	public void setUp() throws Exception {
 		File repo = temporaryFolder.newFolder("repo");
 		commandLine = new CommandLine(OS_SHELL, OS_COMMAND, repo);
-		branch = "master";
+		sonarqube = new SonarQubeSupport(gitlab, commandLine, SONARQUBE_HOST);
+		git = new GitSupport(commandLine);
 
-		ensureAdminCreated();
-		createProject();
+		gitlab.ensureAdminCreated();
+		gitlab.createProject(getClass(), testName);
 
 		prepareGitRepo(repo);
 	}
@@ -134,7 +91,7 @@ public abstract class IntegrationTest {
 			});
 
 		commandLine.startAndAwait("git init");
-		commandLine.startAndAwait("git remote add origin " + getGitlabRepo());
+		commandLine.startAndAwait("git remote add origin " + gitlab.getGitlabRepo());
 		commandLine.startAndAwait("git config user.email \"example@example.com\"");
 		commandLine.startAndAwait("git config user.name \"SGP Integration\"");
 	}
@@ -142,10 +99,10 @@ public abstract class IntegrationTest {
 	/**
 	 * Commits the GIT ignore file as the root commit.
 	 */
-	protected void createInitialCommit() throws IOException {
-		gitAdd(".gitignore");
-		gitCommit();
-		gitCreateBranch("feature");
+	protected void prepareFeatureBranch() throws IOException {
+		git.add(".gitignore");
+		git.commit();
+		git.createBranch("feature");
 	}
 
 	protected Path getTestResource(String pathname) {
@@ -162,43 +119,7 @@ public abstract class IntegrationTest {
 		}
 	}
 
-	protected void gitCreateBranch(String branch) throws IOException {
-		this.branch = branch;
-		commandLine.startAndAwait(String.format("git checkout -b %s", branch));
-	}
-
-	protected void gitCheckoutBranch(String branch) throws IOException {
-		this.branch = branch;
-		gitCheckout(branch);
-	}
-
-	protected void gitCheckout(String commitHash) throws IOException {
-		commandLine.startAndAwait("git checkout " + commitHash);
-	}
-
-	protected void gitAdd(String paths) throws IOException {
-		commandLine.startAndAwait("git add " + paths);
-	}
-
-	protected String gitCommit() throws IOException {
-		return gitCommit("My commit message");
-	}
-	protected String gitCommit(String message) throws IOException {
-		commandLine.startAndAwait(String.format("git commit -m \"%s\"", message));
-		commandLine.startAndAwait(String.format("git push -u origin %s", branch));
-		return getLastCommit();
-	}
-
-	protected String gitCommitAll() throws IOException {
-		gitAdd(".");
-		return gitCommit();
-	}
-
-	private String getLastCommit() throws IOException {
-		return commandLine.startAndAwaitOutput("git log -n 1 --format=%H");
-	}
-
-	protected void remoteMatchedComment(List<String> comments, String message) {
+	protected void removeMatchedComment(List<String> comments, String message) {
 		// Remove a single matched comment.
 		Iterator<String> commentsIterator = comments.iterator();
 		while (commentsIterator.hasNext()) {
@@ -212,194 +133,15 @@ public abstract class IntegrationTest {
 		throw new IllegalStateException("Matcher passed but didn't remove message.");
 	}
 
-	protected AutoCloseable enableSonarqubeRule(String ruleKey) throws IOException {
-		String profile = getQualityProfile();
-
-		Request enableRequest = new Request.Builder()
-			.url(String.format(SONARQUBE_HOST + "/api/qualityprofiles/activate_rule?profile_key=%s&rule_key=%s", profile, ruleKey))
-			.header("Authorization", Credentials.basic("admin", "admin"))
-			.post(RequestBody.create(MediaType.parse("application/json"), ""))
-			.build();
-
-
-		OkHttpClient client = new OkHttpClient();
-
-		String result = client.newCall(enableRequest).execute().body().string();
-
-		LOGGER.debug("Enabled {} on {}: {}", ruleKey, profile, result);
-
-		return () -> disableSonarqubeRule(client, profile, ruleKey);
+	protected SonarQubeSupport accessSonarQube() {
+		return sonarqube;
 	}
 
-	private void disableSonarqubeRule(OkHttpClient client, String profile, String ruleKey) throws IOException {
-		Request disableRequest = new Request.Builder()
-			.url(String.format(SONARQUBE_HOST + "/api/qualityprofiles/deactivate_rule?profile_key=%s&rule_key=%s", profile, ruleKey))
-			.header("Authorization", Credentials.basic("admin", "admin"))
-			.post(RequestBody.create(MediaType.parse("application/json"), ""))
-			.build();
-
-		String result = client.newCall(disableRequest).execute().body().string();
-
-		LOGGER.debug("Disabled {} on {}: {}", ruleKey, profile, result);
+	protected GitLabSupport accessGitlab() {
+		return gitlab;
 	}
 
-	private String getQualityProfile() throws IOException {
-		Request profileRequest = new Request.Builder()
-			.url(SONARQUBE_HOST + "/api/qualityprofiles/search?language=java")
-			.build();
-
-		OkHttpClient client = new OkHttpClient();
-
-		return MAPPER.readValue(client.newCall(profileRequest).execute().body().string(), SearchQualityProfiles.class)
-			.getProfiles()
-			.stream()
-			.map(QualityProfile::getKey)
-			.findFirst()
-			.orElseThrow(() -> new IllegalStateException("Failed to find Java Quality Profile."));
-	}
-
-	protected void sonarAnalysis() throws IOException {
-		sonarAnalysis(null, false);
-	}
-
-	protected void sonarAnalysis(String commitHash) throws IOException {
-		sonarAnalysis(commitHash, true);
-	}
-
-	private void sonarAnalysis(String commitHash, boolean incremental) throws IOException {
-		LOGGER.info("Starting SonarQube Analysis.");
-
-		String argument = "mvn -B" +
-			// Ensure a clean state
-			" clean" +
-			// Provide binaries
-			" compile " +
-			// Invoke sonar analysis
-			" sonar:sonar" +
-			// Enable Maven debug to not suppress the Sonar debug logging
-			" --debug" +
-			// Enable Sonar debug logging to analyse test failures.
-			" -Dsonar.log.level=DEBUG" +
-			// The host at which the SonarQube instance with our plugin is running.
-			" -Dsonar.host.url=" + SONARQUBE_HOST;
-
-		if (incremental) {
-			// Run analysis in issues mode in order to process the issues on the scanner side
-			argument += " -Dsonar.analysis.mode=issues" +
-				// The host at which our target gitlab instance is running.
-				" -Dsonar.gitlab.uri=" + GITLAB_URL +
-				// The authentication token to access the project within Gitlab
-				" -Dsonar.gitlab.auth.token=" + gitLabAuthToken +
-				// The project to comment on
-				" -Dsonar.gitlab.analyse.project=root/" + project.getName();
-
-			if (commitHash != null) {
-				// The commit we're analysing.
-				argument += " -Dsonar.gitlab.analyse.commit=" + commitHash;
-			}
-		}
-
-		commandLine.startAndAwait(argument);
-	}
-
-	private void ensureAdminCreated() throws Exception {
-		LOGGER.info("Verifying that GitLab Admin account exists.");
-
-		OkHttpClient client = new OkHttpClient.Builder()
-			.cookieJar(new CookieJar() {
-
-				private List<Cookie> cookies = Collections.emptyList();
-
-				@Override
-				public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
-					this.cookies = cookies;
-				}
-
-				@Override
-				public List<Cookie> loadForRequest(HttpUrl url) {
-					return cookies;
-				}
-			})
-			.build();
-
-
-		Request homeRequest = new Request.Builder()
-			.url(GITLAB_URL)
-			.build();
-
-		Response response = client.newCall(homeRequest).execute();
-
-		if (isRedirectedToResetPassword(response)) {
-			Request postRequest = createRegisterAdminRequest(response);
-			LOGGER.info("Registering admin account: {}", postRequest.body());
-			Response createResponse = client.newCall(postRequest).execute();
-			if (!createResponse.isSuccessful()) {
-				throw new IllegalStateException(String.format("Submit of reset password failed: %s", createResponse.message()));
-			}
-		}
-
-		GitlabSession session = GitlabAPI.connect(GITLAB_URL, "root", ADMIN_PASSWORD);
-		gitLabAuthToken = session.getPrivateToken();
-		gitlabApi = GitlabAPI.connect(GITLAB_URL, gitLabAuthToken);
-		LOGGER.info("GitLab API Initialized.");
-	}
-
-	private static Request createRegisterAdminRequest(Response response) throws IOException {
-		String body = response.body().string();
-
-		FormBody.Builder formBodyBuilder = new FormBody.Builder()
-			.add("user[password]", ADMIN_PASSWORD)
-			.add("user[password_confirmation]", ADMIN_PASSWORD);
-
-		Matcher inputFields = INPUT_FIELD.matcher(body);
-		while (inputFields.find()) {
-			String inputField = inputFields.group();
-
-			Matcher nameMatcher = NAME_ATTRIBUTE.matcher(inputField);
-			Matcher valueMatcher = VALUE_ATTRIBUTE.matcher(inputField);
-
-			if (!nameMatcher.find()) {
-				throw new IllegalStateException("Failed to extract name attribute from: " + inputField);
-			}
-
-			if (valueMatcher.find() && !"commit".equalsIgnoreCase(nameMatcher.group(1))) {
-				LOGGER.debug("Adding {} = {} to form body.", nameMatcher.group(1), valueMatcher.group(1));
-				formBodyBuilder.add(nameMatcher.group(1), valueMatcher.group(1));
-			} else {
-				LOGGER.debug("Ignoring valueless input: {}", nameMatcher.group(1));
-			}
-		}
-
-		return new Request.Builder()
-			.url(GITLAB_URL + "/users/password")
-			.post(formBodyBuilder.build())
-			.build();
-	}
-
-	private static boolean isRedirectedToResetPassword(Response response) {
-		if (response.priorResponse() == null) {
-			return false;
-		}
-
-		if (!response.priorResponse().isRedirect()) {
-			return false;
-		}
-
-		return response.priorResponse().header("location").contains("/users/password/edit");
-	}
-
-	private void createProject() throws IOException {
-		LOGGER.info("Ensuring that there is no duplicate project.");
-
-		String projectName = String.format("sgp-it-%s-%s", this.getClass().getSimpleName(), testName.getMethodName());
-
-		List<String> projects = gitlabApi.getAllProjects().stream()
-			.map(GitlabProject::getName)
-			.collect(Collectors.toList());
-		assertThat("Project with that name already exists. Duplicate test name.", projects, not(hasItem(equalTo(projectName))));
-
-		LOGGER.info("Creating Project");
-		project = gitlabApi.createProject(projectName);
-		assertNotNull("Failed to create project in GitLab", project);
+	protected GitSupport accessGit() {
+		return git;
 	}
 }

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.gitlab.api.models.CommitComment;
 import org.hamcrest.collection.IsCollectionWithSize;
 import org.hamcrest.collection.IsEmptyCollection;
 import org.hamcrest.core.IsCollectionContaining;
@@ -21,21 +20,17 @@ public class CommentOnCommitIT extends IntegrationTest {
 
 	@Test
 	public void testCommentsAreCreated() throws IOException {
-		createInitialCommit();
-		String commitHash = gitCommitAll();
-		sonarAnalysis(commitHash);
+		prepareFeatureBranch();
+		String commitHash = accessGit().commitAll();
+		accessSonarQube().runAnalysis(commitHash);
 
-		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commitHash);
-		List<String> comments = commitComments.stream()
-			.filter(comment -> comment.getLine() != null)
-			.map(CommitComment::getNote)
-			.collect(Collectors.toList());
+		List<String> comments = accessGitlab().getCommitComments(commitHash);
 
 		List<String> messages = Files.readAllLines(getTestResource("sonarqube/issues.txt"));
 
 		for (String message : messages) {
 			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
-			remoteMatchedComment(comments, message);
+			removeMatchedComment(comments, message);
 		}
 
 		assertThat(
@@ -47,19 +42,16 @@ public class CommentOnCommitIT extends IntegrationTest {
 
 	@Test
 	public void testCommentIsCreatedForFileIssues() throws Exception {
-		createInitialCommit();
-		String commit = gitCommitAll();
+		prepareFeatureBranch();
+		String commit = accessGit().commitAll();
 
 		// Enable violations on the TAB characters which I do use.
-		try (AutoCloseable ignored = enableSonarqubeRule("squid:S00105")) {
-			sonarAnalysis(commit);
+		try (AutoCloseable ignored = accessSonarQube().enableRule("squid:S00105")) {
+			accessSonarQube().runAnalysis(commit);
 		}
 
-		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commit);
-		assertThat("File issues should have been reported.", commitComments.stream()
-			.filter(comment -> comment.getLine() != null)
-			.map(CommitComment::getNote)
-			.anyMatch(comment -> comment.contains("tab")));
+		List<String> commitComments = accessGitlab().getCommitComments(commit);
+		assertThat("File issues should have been reported.", commitComments.stream().anyMatch(comment -> comment.contains("tab")));
 	}
 
 	@Test
@@ -70,49 +62,40 @@ public class CommentOnCommitIT extends IntegrationTest {
 			.reduce((a, b) -> a + "\n" + b)
 			.orElseThrow(() -> new IllegalStateException("Missing Summary information"));
 
-		createInitialCommit();
-		String commitHash = gitCommitAll();
-		sonarAnalysis(commitHash);
+		prepareFeatureBranch();
+		String commitHash = accessGit().commitAll();
+		accessSonarQube().runAnalysis(commitHash);
 
-		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commitHash);
-		List<String> comments = commitComments.stream()
-			.filter(comment -> comment.getLine() == null)
-			.map(CommitComment::getNote)
-			.collect(Collectors.toList());
-
-		assertThat("Only 1 summary comment should be created", comments, IsCollectionWithSize.hasSize(1));
-		assertThat("The summary doesn't match the expected summary.", comments.get(0), equalTo(expectedSummary));
+		List<String> summaries = accessGitlab().getCommitSummary(commitHash);
+		assertThat("Only 1 summary comment should be created", summaries, IsCollectionWithSize.hasSize(1));
+		assertThat("The summary doesn't match the expected summary.", summaries.get(0), equalTo(expectedSummary));
 	}
 
 	@Test
 	public void testCommentsAreCreatedWhenMultipleCommitsAreUsed() throws IOException {
-		gitAdd("src/main/java/org/johnnei/sgp/it/internal/NoIssue.java pom.xml");
-		gitCommit();
-		gitCreateBranch("feature/my-feature");
+		accessGit().add("src/main/java/org/johnnei/sgp/it/internal/NoIssue.java pom.xml");
+		accessGit().commit();
+		accessGit().createBranch("feature/my-feature");
 
-		gitAdd("src/main/java/org/johnnei/sgp/it/api/sources/Main.java");
-		String firstCommmit = gitCommit();
-		String secondCommit = gitCommitAll();
+		accessGit().add("src/main/java/org/johnnei/sgp/it/api/sources/Main.java");
+		String firstCommmit = accessGit().commit();
+		String secondCommit = accessGit().commitAll();
 
 		// checkout to the initial state to prevent analyse on uncommited files.
-		gitCheckoutBranch("master");
-		sonarAnalysis();
+		accessGit().checkoutBranch("master");
+		accessSonarQube().runAnalysis();
 
-		gitCheckoutBranch("feature/my-feature");
-		sonarAnalysis(secondCommit);
+		accessGit().checkoutBranch("feature/my-feature");
+		accessSonarQube().runAnalysis(secondCommit);
 
-		List<CommitComment> firstCommitComments = gitlabApi.getCommitComments(project.getId(), firstCommmit);
-		List<CommitComment> secondCommitComments = gitlabApi.getCommitComments(project.getId(), secondCommit);
-		List<String> comments = Stream.concat(firstCommitComments.stream(), secondCommitComments.stream())
-			.filter(comment -> comment.getLine() != null)
-			.map(CommitComment::getNote)
+		List<String> comments = Stream.concat(accessGitlab().getCommitComments(firstCommmit).stream(), accessGitlab().getCommitComments(secondCommit).stream())
 			.collect(Collectors.toList());
 
 		List<String> messages = Files.readAllLines(getTestResource("sonarqube/issues.txt"));
 
 		for (String message : messages) {
 			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
-			remoteMatchedComment(comments, message);
+			removeMatchedComment(comments, message);
 		}
 
 		assertThat(
