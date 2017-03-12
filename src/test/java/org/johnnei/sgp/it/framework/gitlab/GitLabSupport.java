@@ -107,12 +107,14 @@ public class GitLabSupport {
 	}
 
 	public void ensureItUserCreated() throws IOException {
-		if (gitlabApi.getUsers().stream().noneMatch(user -> INTEGRATION_USER.equals(user.getUsername()))) {
+		if (gitlabApi == null) {
 			GitlabSession session = GitlabAPI.connect(url, "root", ADMIN_PASSWORD);
 			gitlabApi = GitlabAPI.connect(url, session.getPrivateToken());
 
 			LOGGER.info("Logged in as root to create integration user.");
+		}
 
+		if (gitlabApi.getUsers().stream().noneMatch(user -> INTEGRATION_USER.equals(user.getUsername()))) {
 			gitlabApi.createUser(
 				"it@localhost.nl",
 				ADMIN_PASSWORD,
