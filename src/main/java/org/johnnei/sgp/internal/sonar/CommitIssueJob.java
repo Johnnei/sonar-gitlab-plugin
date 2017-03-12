@@ -122,6 +122,7 @@ public class CommitIssueJob implements PostJob {
 	 */
 	private static Optional<UnifiedDiff> findDiff(String path, PostJobIssue issue, Collection<UnifiedDiff> diffs) {
 		Stream<UnifiedDiff> stream = diffs.stream()
+			.filter(diff -> !diff.getRanges().isEmpty())
 			.filter(diff -> diff.getFilepath().equals(path));
 
 		if (issue.line() != null) {

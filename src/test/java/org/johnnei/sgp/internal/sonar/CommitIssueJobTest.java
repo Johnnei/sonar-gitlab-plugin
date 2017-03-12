@@ -31,6 +31,7 @@ import org.johnnei.sgp.internal.gitlab.DiffFetcher;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
+import org.johnnei.sgp.test.MockIssue;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -119,13 +120,13 @@ public class CommitIssueJobTest {
 		when(pathResolverMock.relativePath(notNull(File.class), eq(file))).thenReturn("src/Main.java");
 
 		String diff = "--- a/src/Main.java\n" +
-				"+++ b/src/Main.java\n" +
-				"@@ -1,5 +1,5 @@\n" +
-				"-package org.johnnei.sgp;\n" +
-				"+package org.johnnei.sgp.it;\n" +
-				" \n" +
-				" import java.io.IOException;\n" +
-				" import java.nio.file.Files;";
+			"+++ b/src/Main.java\n" +
+			"@@ -1,5 +1,5 @@\n" +
+			"-package org.johnnei.sgp;\n" +
+			"+package org.johnnei.sgp.it;\n" +
+			" \n" +
+			" import java.io.IOException;\n" +
+			" import java.nio.file.Files;";
 		GitlabCommitDiff commitDiffOne = mock(GitlabCommitDiff.class);
 		when(commitDiffOne.getDiff()).thenReturn(diff);
 		when(commitDiffOne.getNewPath()).thenReturn("src/Main.java");
@@ -147,6 +148,44 @@ public class CommitIssueJobTest {
 		assertThat("Project must not have changed", report.getProject(), equalTo(projectMock));
 		assertThat("Commit sha must not have changed", report.getBuildCommitSha(), equalTo(hash));
 		assertThat("The iterable of 1 issue should have result in a stream of 1 issue", report.getIssues().count(), equalTo(1L));
+	}
+
+	@Test
+	public void testExecuteFileIssueOnMovedFile() throws Exception {
+		String hash = "a2b4";
+		int projectId = 42;
+		File file = new File("Main.java");
+		PostJobContext postJobContextMock = mock(PostJobContext.class);
+
+		PostJobIssue issueMock = MockIssue.mockFileIssue(file);
+		GitlabProject projectMock = mock(GitlabProject.class);
+		when(projectMock.getId()).thenReturn(projectId);
+		when(pathResolverMock.relativePath(notNull(File.class), eq(file))).thenReturn("src/Main.java");
+
+		String diff = "--- a/src/main/java/org/johnnei/sgp/it/internal/NoIssue.java\n+++ b/src/main/java/org/johnnei/sgp/it/NoIssue.java\n";
+		GitlabCommitDiff commitDiffOne = mock(GitlabCommitDiff.class);
+		when(commitDiffOne.getDiff()).thenReturn(diff);
+		when(commitDiffOne.getOldPath()).thenReturn("src/main/java/org/johnnei/sgp/it/internal/NoIssue.java");
+		when(commitDiffOne.getNewPath()).thenReturn("src/main/java/org/johnnei/sgp/it/NoIssue.java");
+		when(commitDiffOne.getRenamedFile()).thenReturn(true);
+
+		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Collections.singletonList(new UnifiedDiff(hash, commitDiffOne)));
+
+		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
+		when(configurationMock.getGitBaseDir()).thenReturn(new File("."));
+		when(configurationMock.getCommitHash()).thenReturn(hash);
+		when(configurationMock.getProject()).thenReturn(projectMock);
+
+		cut.execute(postJobContextMock);
+
+		ArgumentCaptor<SonarReport> reportCaptor = ArgumentCaptor.forClass(SonarReport.class);
+
+		verify(commitCommenterMock).process(reportCaptor.capture());
+
+		SonarReport report = reportCaptor.getValue();
+		assertThat("Project must not have changed", report.getProject(), equalTo(projectMock));
+		assertThat("Commit sha must not have changed", report.getBuildCommitSha(), equalTo(hash));
+		assertThat("The file level issue on a file that is only moved can't be inline commented.", report.getIssues().count(), equalTo(0L));
 	}
 
 	@Test

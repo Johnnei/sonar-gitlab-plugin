@@ -7,6 +7,7 @@ import org.junit.Test;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
+import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -48,6 +49,24 @@ public class UnifiedDiffTest {
 		assertThat("Path should be the new path", cut.getFilepath(), equalTo("business/pom.xml"));
 		assertThat("Only 1 hunk should be found", cut.getRanges(), hasSize(1));
 		assertThat("Incorrect hunks", cut.getRanges(), IsCollectionContaining.hasItem(new HunkRange(1, 9)));
+	}
+
+	@Test
+	public void testMovedFiled() {
+		GitlabCommitDiff diff = mock(GitlabCommitDiff.class);
+		when(diff.getAMode()).thenReturn("100644");
+		when(diff.getBMode()).thenReturn("100644");
+		when(diff.getNewFile()).thenReturn(false);
+		when(diff.getRenamedFile()).thenReturn(true);
+		when(diff.getDeletedFile()).thenReturn(false);
+		when(diff.getNewPath()).thenReturn("src/main/java/org/johnnei/sgp/it/NoIssue.java");
+		when(diff.getOldPath()).thenReturn("src/main/java/org/johnnei/sgp/it/internal/NoIssue.java");
+		when(diff.getDiff()).thenReturn("--- a/src/main/java/org/johnnei/sgp/it/internal/NoIssue.java\n+++ b/src/main/java/org/johnnei/sgp/it/NoIssue.java\n");
+
+		UnifiedDiff cut = new UnifiedDiff(null, diff);
+
+		assertThat("Path should be the new path", cut.getFilepath(), equalTo("src/main/java/org/johnnei/sgp/it/NoIssue.java"));
+		assertThat("No hunks should be found", cut.getRanges(), empty());
 	}
 
 }
