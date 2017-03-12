@@ -17,9 +17,6 @@ import org.johnnei.sgp.it.framework.IntegrationTest;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 
-/**
- * Created by Johnnei on 2016-12-04.
- */
 public class CommentOnCommitIT extends IntegrationTest {
 
 	@Test
@@ -46,6 +43,23 @@ public class CommentOnCommitIT extends IntegrationTest {
 			comments,
 			IsEmptyCollection.empty()
 		);
+	}
+
+	@Test
+	public void testCommentIsCreatedForFileIssues() throws Exception {
+		createInitialCommit();
+		String commit = gitCommitAll();
+
+		// Enable violations on the TAB characters which I do use.
+		try (AutoCloseable ignored = enableSonarqubeRule("squid:S00105")) {
+			sonarAnalysis(commit);
+		}
+
+		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commit);
+		assertThat("File issues should have been reported.", commitComments.stream()
+			.filter(comment -> comment.getLine() != null)
+			.map(CommitComment::getNote)
+			.anyMatch(comment -> comment.contains("tab")));
 	}
 
 	@Test

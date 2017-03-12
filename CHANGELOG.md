@@ -4,6 +4,7 @@
 - [SGP-17](https://jira.johnnei.org/browse/SGP-17): Accurately create inline comments when multiple new commits have been made since last analysis.
 
 ## Bug Fixes
+- [SGP-31](https://jira.johnnei.org/browse/SGP-31): Issues on file instead of line no longer causes exceptions. File issues will be reported on an arbitrary section of diff containing the file they apply to.
 - [SGP-32](https://jira.johnnei.org/browse/SGP-32): Diff parsing no longer fails on added files which are only a few lines.
 
 # 0.1.0 (2017-01-07)

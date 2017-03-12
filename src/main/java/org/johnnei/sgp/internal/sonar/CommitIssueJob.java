@@ -98,7 +98,7 @@ public class CommitIssueJob implements PostJob {
 			return Stream.empty();
 		}
 
-		return findDiff(path, issue, diffs).map(diff -> Stream.of(new MappedIssue(issue, diff.getCommitSha(), path))).orElseGet(() -> {
+		return findDiff(path, issue, diffs).map(diff -> Stream.of(new MappedIssue(issue, diff, path))).orElseGet(() -> {
 			LOGGER.warn("Failed to find diff for issue \"{}\" in \"{}\"", issue.message(), issue.inputComponent());
 			return Stream.empty();
 		});
@@ -121,9 +121,15 @@ public class CommitIssueJob implements PostJob {
 	 * @return <code>true</code> when the issue is on a modified line. Otherwise <code>false</code>.
 	 */
 	private static Optional<UnifiedDiff> findDiff(String path, PostJobIssue issue, Collection<UnifiedDiff> diffs) {
-		return diffs.stream()
-			.filter(diff -> diff.getFilepath().equals(path))
-			.filter(diff -> diff.getRanges().stream().anyMatch(range -> range.containsLine(issue.line())))
-			.findAny();
+		Stream<UnifiedDiff> stream = diffs.stream()
+			.filter(diff -> !diff.getRanges().isEmpty())
+			.filter(diff -> diff.getFilepath().equals(path));
+
+		if (issue.line() != null) {
+			stream = stream.filter(diff -> diff.getRanges().stream().anyMatch(range -> range.containsLine(issue.line())));
+		}
+
+		return stream.findAny();
 	}
+
 }

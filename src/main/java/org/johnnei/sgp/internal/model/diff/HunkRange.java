@@ -24,6 +24,10 @@ public class HunkRange {
 		return line >= start && line < (start + lineCount);
 	}
 
+	public int getStart() {
+		return start;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {

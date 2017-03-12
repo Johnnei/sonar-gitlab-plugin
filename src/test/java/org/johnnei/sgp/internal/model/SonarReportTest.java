@@ -8,6 +8,8 @@ import org.junit.Test;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.batch.rule.Severity;
 
+import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
@@ -25,10 +27,15 @@ public class SonarReportTest {
 		when(criticalIssueMock.severity()).thenReturn(Severity.CRITICAL);
 		when(minorIssueMock.severity()).thenReturn(Severity.MINOR);
 
+		UnifiedDiff diff = mock(UnifiedDiff.class);
+		when(diff.getCommitSha()).thenReturn("a2b4");
+		UnifiedDiff diff2 = mock(UnifiedDiff.class);
+		when(diff2.getCommitSha()).thenReturn("a3b4");
+
 		cut = new SonarReport.Builder()
 			.setBuildCommitSha("a2b4")
 			.setProject(mock(GitlabProject.class))
-			.setIssues(Arrays.asList(new MappedIssue(criticalIssueMock, "a2b4", ""), new MappedIssue(minorIssueMock, "a3b4", "")))
+			.setIssues(Arrays.asList(new MappedIssue(criticalIssueMock, diff, ""), new MappedIssue(minorIssueMock, diff2, "")))
 			.build();
 	}
 
@@ -59,13 +66,18 @@ public class SonarReportTest {
 		when(criticalIssueMock.severity()).thenReturn(Severity.CRITICAL);
 		when(minorIssueMock.severity()).thenReturn(Severity.MINOR);
 
+		UnifiedDiff diff = mock(UnifiedDiff.class);
+		when(diff.getCommitSha()).thenReturn("a2b4");
+		UnifiedDiff diff2 = mock(UnifiedDiff.class);
+		when(diff2.getCommitSha()).thenReturn("a3b4");
+
 		cut = new SonarReport.Builder()
 			.setBuildCommitSha("a2b4")
 			.setProject(mock(GitlabProject.class))
 			.setIssues(Arrays.asList(
-				new MappedIssue(criticalIssueMock, "a2b4", ""),
-				new MappedIssue(minorIssueMock, "a3b4", ""),
-				new MappedIssue(minorIssueMock, "a3b4", ""))
+				new MappedIssue(criticalIssueMock, diff, ""),
+				new MappedIssue(minorIssueMock, diff, ""),
+				new MappedIssue(minorIssueMock, diff2, ""))
 			)
 			.build();
 
