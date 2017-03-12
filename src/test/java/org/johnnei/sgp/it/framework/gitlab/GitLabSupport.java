@@ -35,6 +35,8 @@ public class GitLabSupport {
 
 	private static final String ADMIN_PASSWORD = "Test1234@!";
 
+	private static final String INTEGRATION_USER = "Integrator";
+
 	private static final Pattern INPUT_FIELD = Pattern.compile("<input(.*?)>");
 
 	private static final Pattern NAME_ATTRIBUTE = Pattern.compile("name=\"(.*?)\"");
@@ -58,7 +60,8 @@ public class GitLabSupport {
 
 	public String getGitlabRepo() {
 		return String.format(
-			"http://root:%s@%s/root/%s.git",
+			"http://%s:%s@%s/root/%s.git",
+			INTEGRATION_USER,
 			ADMIN_PASSWORD.replaceAll("@", "%40").replaceAll("!", "%21"),
 			host,
 			project.getName().toLowerCase()
@@ -99,20 +102,21 @@ public class GitLabSupport {
 			if (!createResponse.isSuccessful()) {
 				throw new IllegalStateException(String.format("Submit of reset password failed: %s", createResponse.message()));
 			}
+			LOGGER.info("GitLab Root user initialized.");
 		}
-
-		GitlabSession session = GitlabAPI.connect(url, "root", ADMIN_PASSWORD);
-		gitLabAuthToken = session.getPrivateToken();
-		gitlabApi = GitlabAPI.connect(url, gitLabAuthToken);
-		LOGGER.info("GitLab API Initialized.");
 	}
 
 	public void ensureItUserCreated() throws IOException {
-		if (gitlabApi.getUsers().stream().noneMatch(user -> "Integrator".equals(user.getUsername()))) {
+		if (gitlabApi.getUsers().stream().noneMatch(user -> INTEGRATION_USER.equals(user.getUsername()))) {
+			GitlabSession session = GitlabAPI.connect(url, "root", ADMIN_PASSWORD);
+			gitlabApi = GitlabAPI.connect(url, session.getPrivateToken());
+
+			LOGGER.info("Logged in as root to create integration user.");
+
 			gitlabApi.createUser(
 				"it@localhost.nl",
 				ADMIN_PASSWORD,
-				"Integrator",
+				INTEGRATION_USER,
 				"Integrator",
 				null,
 				null,
@@ -129,10 +133,14 @@ public class GitLabSupport {
 			LOGGER.info("GitLab integration user created.");
 		}
 
-		GitlabSession session = GitlabAPI.connect(url, "Integrator", ADMIN_PASSWORD);
-		gitLabAuthToken = session.getPrivateToken();
-		gitlabApi = GitlabAPI.connect(url, gitLabAuthToken);
-		LOGGER.info("Switched to non-admin user.");
+		if (gitLabAuthToken == null) {
+			GitlabSession session = GitlabAPI.connect(url, INTEGRATION_USER, ADMIN_PASSWORD);
+			gitLabAuthToken = session.getPrivateToken();
+			gitlabApi = GitlabAPI.connect(url, gitLabAuthToken);
+			LOGGER.info("Logged in as {}.");
+		} else {
+			LOGGER.info("Re-using existing GitLab session.");
+		}
 	}
 
 	public void createProject(Class<?> clazz, TestName testName) throws IOException {
