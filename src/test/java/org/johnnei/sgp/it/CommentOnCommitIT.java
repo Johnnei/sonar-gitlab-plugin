@@ -17,9 +17,6 @@ import org.johnnei.sgp.it.framework.IntegrationTest;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 
-/**
- * Created by Johnnei on 2016-12-04.
- */
 public class CommentOnCommitIT extends IntegrationTest {
 
 	@Test
