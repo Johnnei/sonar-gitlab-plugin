@@ -68,6 +68,8 @@ public class CommitIssueJobTest {
 	@Mock
 	private DiffFetcher diffFetcherMock;
 
+	private UnifiedDiff diff;
+
 	@Before
 	public void setUp() {
 		when(configurationMock.createGitLabConnection()).thenReturn(gitlabApiMock);
@@ -82,6 +84,7 @@ public class CommitIssueJobTest {
 		};
 
 		Whitebox.setInternalState(cut, PathResolver.class, pathResolverMock);
+		diff = mock(UnifiedDiff.class);
 	}
 
 	@Test
@@ -156,7 +159,7 @@ public class CommitIssueJobTest {
 		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
 		when(issueMock.message()).thenReturn("Remove this violation!");
 
-		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, "", "")));
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, diff, "")));
 		String hash = "a2b4";
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 

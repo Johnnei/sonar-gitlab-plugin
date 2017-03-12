@@ -153,7 +153,7 @@ public class CommitCommenter {
 				mappedIssue.getCommitSha(),
 				mappedIssue.getIssue().message(),
 				mappedIssue.getPath(),
-				Integer.toString(mappedIssue.getIssue().line()),
+				formatLineNumber(mappedIssue),
 				"new"
 			);
 			return true;
@@ -161,5 +161,22 @@ public class CommitCommenter {
 			LOGGER.warn("Failed to create comment for in {}:{}.", mappedIssue.getPath(), mappedIssue.getIssue().line(), e);
 			return false;
 		}
+	}
+
+	private String formatLineNumber(MappedIssue mappedIssue) {
+		int line;
+
+		if (mappedIssue.getIssue().line() == null) {
+			line = mappedIssue.getDiff()
+				.getRanges()
+				.stream()
+				.findAny()
+				.orElseThrow(() -> new IllegalStateException(String.format("Diff without ranges for file: %s", mappedIssue.getPath())))
+				.getStart();
+		} else {
+			line = mappedIssue.getIssue().line();
+		}
+
+		return Integer.toString(line);
 	}
 }

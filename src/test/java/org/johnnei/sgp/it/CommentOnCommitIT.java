@@ -60,7 +60,7 @@ public class CommentOnCommitIT extends IntegrationTest {
 
 		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commit);
 		assertThat("File issues should have been reported.", commitComments.stream()
-			.filter(comment -> comment.getLine() == null)
+			.filter(comment -> comment.getLine() != null)
 			.map(CommitComment::getNote)
 			.anyMatch(comment -> comment.contains("tab")));
 	}
