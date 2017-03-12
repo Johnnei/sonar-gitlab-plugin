@@ -107,12 +107,40 @@ public class GitLabSupport {
 		LOGGER.info("GitLab API Initialized.");
 	}
 
+	public void ensureItUserCreated() throws IOException {
+		if (gitlabApi.getUsers().stream().noneMatch(user -> "Integrator".equals(user.getUsername()))) {
+			gitlabApi.createUser(
+				"it@localhost.nl",
+				ADMIN_PASSWORD,
+				"Integrator",
+				"Integrator",
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				false,
+				false,
+				true
+			);
+			LOGGER.info("GitLab integration user created.");
+		}
+
+		GitlabSession session = GitlabAPI.connect(url, "Integrator", ADMIN_PASSWORD);
+		gitLabAuthToken = session.getPrivateToken();
+		gitlabApi = GitlabAPI.connect(url, gitLabAuthToken);
+		LOGGER.info("Switched to non-admin user.");
+	}
+
 	public void createProject(Class<?> clazz, TestName testName) throws IOException {
 		LOGGER.info("Ensuring that there is no duplicate project.");
 
 		String projectName = String.format("sgp-it-%s-%s", clazz.getSimpleName(), testName.getMethodName());
 
-		List<String> projects = gitlabApi.getAllProjects().stream()
+		List<String> projects = gitlabApi.getProjects().stream()
 			.map(GitlabProject::getName)
 			.collect(Collectors.toList());
 		assertThat("Project with that name already exists. Duplicate test name.", projects, not(hasItem(equalTo(projectName))));
@@ -121,10 +149,10 @@ public class GitLabSupport {
 		project = gitlabApi.createProject(projectName);
 		assertNotNull("Failed to create project in GitLab", project);
 	}
-
 	public List<String> getAllCommitComments(String commitHash) throws IOException {
 		return fetchCommitComments(commitHash, commitComment -> true);
 	}
+
 	public List<String> getCommitSummary(String commitHash) throws IOException {
 		return fetchCommitComments(commitHash, GitLabSupport::filterSummary);
 	}

@@ -72,6 +72,7 @@ public abstract class IntegrationTest {
 		git = new GitSupport(commandLine);
 
 		gitlab.ensureAdminCreated();
+		gitlab.ensureItUserCreated();
 		gitlab.createProject(getClass(), testName);
 
 		prepareGitRepo(repo);
