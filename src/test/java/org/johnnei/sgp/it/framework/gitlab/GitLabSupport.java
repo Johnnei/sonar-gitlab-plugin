@@ -35,6 +35,8 @@ public class GitLabSupport {
 
 	private static final String ADMIN_PASSWORD = "Test1234@!";
 
+	private static final String INTEGRATION_USER = "Integrator";
+
 	private static final Pattern INPUT_FIELD = Pattern.compile("<input(.*?)>");
 
 	private static final Pattern NAME_ATTRIBUTE = Pattern.compile("name=\"(.*?)\"");
@@ -58,9 +60,11 @@ public class GitLabSupport {
 
 	public String getGitlabRepo() {
 		return String.format(
-			"http://root:%s@%s/root/%s.git",
+			"http://%s:%s@%s/%s/%s.git",
+			INTEGRATION_USER,
 			ADMIN_PASSWORD.replaceAll("@", "%40").replaceAll("!", "%21"),
 			host,
+			INTEGRATION_USER,
 			project.getName().toLowerCase()
 		);
 	}
@@ -99,12 +103,47 @@ public class GitLabSupport {
 			if (!createResponse.isSuccessful()) {
 				throw new IllegalStateException(String.format("Submit of reset password failed: %s", createResponse.message()));
 			}
+			LOGGER.info("GitLab Root user initialized.");
+		}
+	}
+
+	public void ensureItUserCreated() throws IOException {
+		if (gitlabApi == null) {
+			GitlabSession session = GitlabAPI.connect(url, "root", ADMIN_PASSWORD);
+			gitlabApi = GitlabAPI.connect(url, session.getPrivateToken());
+
+			LOGGER.info("Logged in as root to create integration user.");
 		}
 
-		GitlabSession session = GitlabAPI.connect(url, "root", ADMIN_PASSWORD);
-		gitLabAuthToken = session.getPrivateToken();
-		gitlabApi = GitlabAPI.connect(url, gitLabAuthToken);
-		LOGGER.info("GitLab API Initialized.");
+		if (gitlabApi.getUsers().stream().noneMatch(user -> INTEGRATION_USER.equals(user.getUsername()))) {
+			gitlabApi.createUser(
+				"it@localhost.nl",
+				ADMIN_PASSWORD,
+				INTEGRATION_USER,
+				"Integrator",
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				false,
+				false,
+				true
+			);
+			LOGGER.info("GitLab integration user created.");
+		}
+
+		if (gitLabAuthToken == null) {
+			GitlabSession session = GitlabAPI.connect(url, INTEGRATION_USER, ADMIN_PASSWORD);
+			gitLabAuthToken = session.getPrivateToken();
+			gitlabApi = GitlabAPI.connect(url, gitLabAuthToken);
+			LOGGER.info("Logged in as {}.", INTEGRATION_USER);
+		} else {
+			LOGGER.info("Re-using existing GitLab session.");
+		}
 	}
 
 	public void createProject(Class<?> clazz, TestName testName) throws IOException {
@@ -112,7 +151,7 @@ public class GitLabSupport {
 
 		String projectName = String.format("sgp-it-%s-%s", clazz.getSimpleName(), testName.getMethodName());
 
-		List<String> projects = gitlabApi.getAllProjects().stream()
+		List<String> projects = gitlabApi.getProjects().stream()
 			.map(GitlabProject::getName)
 			.collect(Collectors.toList());
 		assertThat("Project with that name already exists. Duplicate test name.", projects, not(hasItem(equalTo(projectName))));
@@ -121,10 +160,10 @@ public class GitLabSupport {
 		project = gitlabApi.createProject(projectName);
 		assertNotNull("Failed to create project in GitLab", project);
 	}
-
 	public List<String> getAllCommitComments(String commitHash) throws IOException {
 		return fetchCommitComments(commitHash, commitComment -> true);
 	}
+
 	public List<String> getCommitSummary(String commitHash) throws IOException {
 		return fetchCommitComments(commitHash, GitLabSupport::filterSummary);
 	}
@@ -197,8 +236,8 @@ public class GitLabSupport {
 		return gitLabAuthToken;
 	}
 
-	public GitlabProject getProject() {
-		return project;
+	public String getProjectName() {
+		return INTEGRATION_USER + "/" + project.getName();
 	}
 
 	public String getUrl() {

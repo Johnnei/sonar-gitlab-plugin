@@ -65,7 +65,7 @@ public class SonarQubeSupport {
 				// The authentication token to access the project within Gitlab
 				" -Dsonar.gitlab.auth.token=" + gitlab.getGitLabAuthToken() +
 				// The project to comment on
-				" -Dsonar.gitlab.analyse.project=root/" + gitlab.getProject().getName();
+				" -Dsonar.gitlab.analyse.project=" + gitlab.getProjectName();
 
 			if (commitHash != null) {
 				// The commit we're analysing.

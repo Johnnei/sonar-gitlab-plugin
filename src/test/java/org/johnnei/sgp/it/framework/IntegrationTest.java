@@ -33,7 +33,7 @@ public abstract class IntegrationTest {
 	private static final String OS_SHELL = getProperty("os.shell", "/bin/bash");
 	private static final String OS_COMMAND = getProperty("os.command", "-c");
 
-	private final GitLabSupport gitlab = new GitLabSupport(GITLAB_HOST, GITLAB_URL);
+	private static final GitLabSupport gitlab = new GitLabSupport(GITLAB_HOST, GITLAB_URL);
 
 	private SonarQubeSupport sonarqube;
 
@@ -72,6 +72,7 @@ public abstract class IntegrationTest {
 		git = new GitSupport(commandLine);
 
 		gitlab.ensureAdminCreated();
+		gitlab.ensureItUserCreated();
 		gitlab.createProject(getClass(), testName);
 
 		prepareGitRepo(repo);
