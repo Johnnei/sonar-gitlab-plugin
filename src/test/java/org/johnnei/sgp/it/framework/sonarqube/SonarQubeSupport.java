@@ -76,7 +76,7 @@ public class SonarQubeSupport {
 				// The host at which our target gitlab instance is running.
 				" -Dsonar.gitlab.uri=" + gitlab.getUrl() +
 				// The authentication token to access the project within Gitlab
-				" -Dsonar.gitlab.auth.token=" + gitlab.getGitLabAuthToken() +
+				" -Dsonar.gitlab.auth.token=" + gitlab.getSonarUserToken() +
 				// The project to comment on
 				" -Dsonar.gitlab.analyse.project=" + gitlab.getProjectName();
 
