@@ -2,6 +2,7 @@
 
 ## New Features
 - [SGP-17](https://jira.johnnei.org/browse/SGP-17): Accurately create inline comments when multiple new commits have been made since last analysis.
+- [SGP-14](https://jira.johnnei.org/browse/SGP-14): Break the GitLab Pipeline when critical or worse issues are introduced.
 
 ## Bug Fixes
 - [SGP-31](https://jira.johnnei.org/browse/SGP-31): Issues on file instead of line no longer causes exceptions. File issues will be reported on an arbitrary section of diff containing the file they apply to.
