@@ -60,10 +60,11 @@ public class GitLabSupport {
 
 	public String getGitlabRepo() {
 		return String.format(
-			"http://%s:%s@%s/root/%s.git",
+			"http://%s:%s@%s/%s/%s.git",
 			INTEGRATION_USER,
 			ADMIN_PASSWORD.replaceAll("@", "%40").replaceAll("!", "%21"),
 			host,
+			INTEGRATION_USER,
 			project.getName().toLowerCase()
 		);
 	}
@@ -139,7 +140,7 @@ public class GitLabSupport {
 			GitlabSession session = GitlabAPI.connect(url, INTEGRATION_USER, ADMIN_PASSWORD);
 			gitLabAuthToken = session.getPrivateToken();
 			gitlabApi = GitlabAPI.connect(url, gitLabAuthToken);
-			LOGGER.info("Logged in as {}.");
+			LOGGER.info("Logged in as {}.", INTEGRATION_USER);
 		} else {
 			LOGGER.info("Re-using existing GitLab session.");
 		}
@@ -235,8 +236,8 @@ public class GitLabSupport {
 		return gitLabAuthToken;
 	}
 
-	public GitlabProject getProject() {
-		return project;
+	public String getProjectName() {
+		return INTEGRATION_USER + "/" + project.getName();
 	}
 
 	public String getUrl() {
