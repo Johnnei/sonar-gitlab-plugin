@@ -17,6 +17,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.models.CommitComment;
+import org.gitlab.api.models.GitlabCommitStatus;
 import org.gitlab.api.models.GitlabProject;
 import org.gitlab.api.models.GitlabSession;
 import org.junit.rules.TestName;
@@ -178,6 +179,10 @@ public class GitLabSupport {
 			.filter(filter)
 			.map(CommitComment::getNote)
 			.collect(Collectors.toList());
+	}
+
+	public GitlabCommitStatus getCommitStatus(String commit) throws IOException {
+		return gitlabApi.getCommitStatuses(project, commit).stream().filter(status -> "SonarQube".equals(status.getName())).findAny().orElse(null);
 	}
 
 	private static boolean filterIssues(CommitComment comment) {

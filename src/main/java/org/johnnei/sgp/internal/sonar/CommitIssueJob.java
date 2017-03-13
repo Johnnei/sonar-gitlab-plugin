@@ -22,6 +22,7 @@ import org.sonar.api.utils.log.Loggers;
 
 import org.johnnei.sgp.internal.gitlab.CommitCommenter;
 import org.johnnei.sgp.internal.gitlab.DiffFetcher;
+import org.johnnei.sgp.internal.gitlab.PipelineBreaker;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
@@ -45,9 +46,12 @@ public class CommitIssueJob implements PostJob {
 
 	private final PathResolver pathResolver;
 
-	public CommitIssueJob(DiffFetcher diffFetcher, GitLabPluginConfiguration configuration) {
+	private final PipelineBreaker pipelineBreaker;
+
+	public CommitIssueJob(DiffFetcher diffFetcher, GitLabPluginConfiguration configuration, PipelineBreaker pipelineBreaker) {
 		this.configuration = configuration;
 		this.diffFetcher = diffFetcher;
+		this.pipelineBreaker = pipelineBreaker;
 		this.pathResolver = new PathResolver();
 	}
 
@@ -84,6 +88,8 @@ public class CommitIssueJob implements PostJob {
 		commitCommenter.process(report);
 
 		stopwatch.stop();
+
+		pipelineBreaker.process(report);
 	}
 
 	/**

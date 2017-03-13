@@ -6,6 +6,7 @@ import org.sonar.api.Property;
 import org.sonar.api.PropertyType;
 
 import org.johnnei.sgp.internal.gitlab.DiffFetcher;
+import org.johnnei.sgp.internal.gitlab.PipelineBreaker;
 import org.johnnei.sgp.internal.sonar.CommitAnalysisBuilder;
 import org.johnnei.sgp.internal.sonar.CommitIssueJob;
 import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
@@ -46,6 +47,14 @@ import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
 		description = "The source branch of the analysed branch. (Ex. with GitFlow this would be develop)",
 		defaultValue = "master",
 		project = true
+	),
+	@Property(
+		key = GitLabPlugin.GITLAB_BREAK_PIPELINE,
+		name = "Break GitLab Pipeline",
+		description = "If the Pipeline should break on when a critical or worse issue has been found in the incremental analysis.",
+		defaultValue = "true",
+		type = PropertyType.BOOLEAN,
+		project = true
 	)
 })
 public class GitLabPlugin implements Plugin {
@@ -55,6 +64,7 @@ public class GitLabPlugin implements Plugin {
 	public static final String GITLAB_PROJECT_NAME = "sonar.gitlab.analyse.project";
 	public static final String GITLAB_COMMIT_HASH = "sonar.gitlab.analyse.commit";
 	public static final String GITLAB_BASE_BRANCH = "sonar.gitlab.analyse.base";
+	public static final String GITLAB_BREAK_PIPELINE = "sonar.gitlab.pipeline.break";
 
 	@Override
 	public void define(Context context) {
@@ -62,6 +72,7 @@ public class GitLabPlugin implements Plugin {
 			.addExtension(GitLabPluginConfiguration.class)
 			.addExtension(CommitAnalysisBuilder.class)
 			.addExtension(DiffFetcher.class)
+			.addExtension(PipelineBreaker.class)
 			.addExtension(CommitIssueJob.class);
 	}
 }
