@@ -8,6 +8,9 @@
 - [SGP-31](https://jira.johnnei.org/browse/SGP-31): Issues on file instead of line no longer causes exceptions. File issues will be reported on an arbitrary section of diff containing the file they apply to.
 - [SGP-32](https://jira.johnnei.org/browse/SGP-32): Diff parsing no longer fails on added files which are only a few lines.
 
+## Miscellaneous
+- [SGP-38](https://jira.johnnei.org/browse/SGP-38): Plugin key was changed from `gitlab` to `gitlabintegration`.
+
 # 0.1.0 (2017-01-07)
 No changes since last rc.
 

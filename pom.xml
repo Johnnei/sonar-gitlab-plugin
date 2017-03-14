@@ -21,6 +21,8 @@
     <!-- Deployment -->
     <sonar.pluginName>GitLab Integration</sonar.pluginName>
     <sonar.pluginClass>org.johnnei.sgp.sonar.GitLabPlugin</sonar.pluginClass>
+    <!-- Use a different key to avoid conflicts with the competition -->
+    <sonar.pluginKey>gitlabintegration</sonar.pluginKey>
 
     <!-- Default IT settings -->
     <it.sonar.version>lts</it.sonar.version>
