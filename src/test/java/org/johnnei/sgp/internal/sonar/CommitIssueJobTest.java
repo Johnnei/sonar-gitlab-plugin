@@ -28,6 +28,7 @@ import org.sonar.api.utils.log.LogTester;
 
 import org.johnnei.sgp.internal.gitlab.CommitCommenter;
 import org.johnnei.sgp.internal.gitlab.DiffFetcher;
+import org.johnnei.sgp.internal.gitlab.PipelineBreaker;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
@@ -69,12 +70,15 @@ public class CommitIssueJobTest {
 	@Mock
 	private DiffFetcher diffFetcherMock;
 
+	@Mock
+	private PipelineBreaker pipelineBreaker;
+
 	private UnifiedDiff diff;
 
 	@Before
 	public void setUp() {
 		when(configurationMock.createGitLabConnection()).thenReturn(gitlabApiMock);
-		cut = new CommitIssueJob(diffFetcherMock, configurationMock) {
+		cut = new CommitIssueJob(diffFetcherMock, configurationMock, pipelineBreaker) {
 			@Override
 			CommitCommenter createCommenter() {
 				// Initialize API and create commenter
@@ -143,6 +147,7 @@ public class CommitIssueJobTest {
 		ArgumentCaptor<SonarReport> reportCaptor = ArgumentCaptor.forClass(SonarReport.class);
 
 		verify(commitCommenterMock).process(reportCaptor.capture());
+		verify(pipelineBreaker).process(reportCaptor.getValue());
 
 		SonarReport report = reportCaptor.getValue();
 		assertThat("Project must not have changed", report.getProject(), equalTo(projectMock));

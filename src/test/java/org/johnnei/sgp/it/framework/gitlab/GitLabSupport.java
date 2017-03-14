@@ -17,6 +17,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.models.CommitComment;
+import org.gitlab.api.models.GitlabAccessLevel;
+import org.gitlab.api.models.GitlabCommitStatus;
 import org.gitlab.api.models.GitlabProject;
 import org.gitlab.api.models.GitlabSession;
 import org.junit.rules.TestName;
@@ -47,11 +49,13 @@ public class GitLabSupport {
 
 	private final String url;
 
-	private GitlabAPI gitlabApi;
+	private GitlabAPI rootUser;
+
+	private GitlabAPI sonarUser;
 
 	private GitlabProject project;
 
-	private String gitLabAuthToken;
+	private String sonarUserToken;
 
 	public GitLabSupport(String host, String url) {
 		this.host = host;
@@ -60,11 +64,9 @@ public class GitLabSupport {
 
 	public String getGitlabRepo() {
 		return String.format(
-			"http://%s:%s@%s/%s/%s.git",
-			INTEGRATION_USER,
+			"http://root:%s@%s/root/%s.git",
 			ADMIN_PASSWORD.replaceAll("@", "%40").replaceAll("!", "%21"),
 			host,
-			INTEGRATION_USER,
 			project.getName().toLowerCase()
 		);
 	}
@@ -108,19 +110,19 @@ public class GitLabSupport {
 	}
 
 	public void ensureItUserCreated() throws IOException {
-		if (gitlabApi == null) {
+		if (rootUser == null) {
 			GitlabSession session = GitlabAPI.connect(url, "root", ADMIN_PASSWORD);
-			gitlabApi = GitlabAPI.connect(url, session.getPrivateToken());
+			rootUser = GitlabAPI.connect(url, session.getPrivateToken());
 
 			LOGGER.info("Logged in as root to create integration user.");
 		}
 
-		if (gitlabApi.getUsers().stream().noneMatch(user -> INTEGRATION_USER.equals(user.getUsername()))) {
-			gitlabApi.createUser(
+		if (rootUser.getUsers().stream().noneMatch(user -> INTEGRATION_USER.equals(user.getUsername()))) {
+			rootUser.createUser(
 				"it@localhost.nl",
 				ADMIN_PASSWORD,
 				INTEGRATION_USER,
-				"Integrator",
+				"SonarQube Bot",
 				null,
 				null,
 				null,
@@ -136,10 +138,10 @@ public class GitLabSupport {
 			LOGGER.info("GitLab integration user created.");
 		}
 
-		if (gitLabAuthToken == null) {
+		if (sonarUserToken == null) {
 			GitlabSession session = GitlabAPI.connect(url, INTEGRATION_USER, ADMIN_PASSWORD);
-			gitLabAuthToken = session.getPrivateToken();
-			gitlabApi = GitlabAPI.connect(url, gitLabAuthToken);
+			sonarUserToken = session.getPrivateToken();
+			sonarUser = GitlabAPI.connect(url, sonarUserToken);
 			LOGGER.info("Logged in as {}.", INTEGRATION_USER);
 		} else {
 			LOGGER.info("Re-using existing GitLab session.");
@@ -151,14 +153,17 @@ public class GitLabSupport {
 
 		String projectName = String.format("sgp-it-%s-%s", clazz.getSimpleName(), testName.getMethodName());
 
-		List<String> projects = gitlabApi.getProjects().stream()
+		List<String> projects = rootUser.getProjects().stream()
 			.map(GitlabProject::getName)
 			.collect(Collectors.toList());
 		assertThat("Project with that name already exists. Duplicate test name.", projects, not(hasItem(equalTo(projectName))));
 
 		LOGGER.info("Creating Project");
-		project = gitlabApi.createProject(projectName);
+		project = rootUser.createProject(projectName);
 		assertNotNull("Failed to create project in GitLab", project);
+
+		rootUser.addProjectMember(project.getId(), sonarUser.getUser().getId(), GitlabAccessLevel.Developer);
+		LOGGER.info("Added {} as developer on project.", INTEGRATION_USER);
 	}
 	public List<String> getAllCommitComments(String commitHash) throws IOException {
 		return fetchCommitComments(commitHash, commitComment -> true);
@@ -173,11 +178,15 @@ public class GitLabSupport {
 	}
 
 	private List<String> fetchCommitComments(String commitHash, Predicate<CommitComment> filter) throws IOException {
-		return gitlabApi.getCommitComments(project.getId(), commitHash)
+		return sonarUser.getCommitComments(project.getId(), commitHash)
 			.stream()
 			.filter(filter)
 			.map(CommitComment::getNote)
 			.collect(Collectors.toList());
+	}
+
+	public GitlabCommitStatus getCommitStatus(String commit) throws IOException {
+		return sonarUser.getCommitStatuses(project, commit).stream().filter(status -> "SonarQube".equals(status.getName())).findAny().orElse(null);
 	}
 
 	private static boolean filterIssues(CommitComment comment) {
@@ -232,12 +241,12 @@ public class GitLabSupport {
 			.build();
 	}
 
-	public String getGitLabAuthToken() {
-		return gitLabAuthToken;
+	public String getSonarUserToken() {
+		return sonarUserToken;
 	}
 
 	public String getProjectName() {
-		return INTEGRATION_USER + "/" + project.getName();
+		return "root/" + project.getName();
 	}
 
 	public String getUrl() {

@@ -133,6 +133,10 @@ public class GitLabPluginConfiguration {
 		return settings.getString(GitLabPlugin.GITLAB_BASE_BRANCH);
 	}
 
+	public boolean isBreakPipelineEnabled() {
+		return settings.getBoolean(GitLabPlugin.GITLAB_BREAK_PIPELINE);
+	}
+
 	private static boolean isNotBlank(@CheckForNull String string) {
 		return !isBlank(string);
 	}
