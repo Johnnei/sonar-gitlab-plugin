@@ -2,6 +2,8 @@ package org.johnnei.sgp.internal.gitlab;
 
 import javax.annotation.Nonnull;
 
+import org.sonar.api.batch.rule.Severity;
+
 /**
  * Class which provides functional orientated methods to build a message in markdown format.
  */
@@ -31,6 +33,28 @@ public class MarkdownBuilder {
 
 	public MarkdownBuilder addLineBreak() {
 		builder.append("\n");
+		return this;
+	}
+
+	public MarkdownBuilder addSeverityIcon(Severity severity) {
+		switch (severity) {
+			case INFO:
+				addText(":information_source:");
+				break;
+			case MINOR:
+				addText(":grey_exclamation:");
+				break;
+			case MAJOR:
+				addText(":exclamation:");
+				break;
+			case CRITICAL:
+				addText(":bangbang:");
+				break;
+			case BLOCKER:
+				addText(":negative_squared_cross_mark:");
+				break;
+		}
+		addText(" ");
 		return this;
 	}
 

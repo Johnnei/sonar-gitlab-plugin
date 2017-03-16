@@ -147,11 +147,16 @@ public class CommitCommenter {
 	 * @return <code>true</code> when the comment was successfully created. Otherwise <code>false</code>.
 	 */
 	private boolean postComment(SonarReport report, MappedIssue mappedIssue) {
+
+		MarkdownBuilder messageBuilder = new MarkdownBuilder();
+		messageBuilder.addSeverityIcon(mappedIssue.getIssue().severity());
+		messageBuilder.addText(mappedIssue.getIssue().message());
+
 		try {
 			gitlabApi.createCommitComment(
 				report.getProject().getId(),
 				mappedIssue.getCommitSha(),
-				mappedIssue.getIssue().message(),
+				messageBuilder.toString(),
 				mappedIssue.getPath(),
 				formatLineNumber(mappedIssue),
 				"new"

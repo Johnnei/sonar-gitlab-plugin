@@ -1,3 +1,3 @@
-Change this condition so that it does not always evaluate to "true"
-Document this public method.
-Remove this if statement.
+:bangbang: Change this condition so that it does not always evaluate to "true"
+:grey_exclamation: Document this public method.
+:exclamation: Remove this if statement.
