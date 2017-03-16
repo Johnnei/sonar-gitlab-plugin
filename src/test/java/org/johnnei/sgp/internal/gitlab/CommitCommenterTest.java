@@ -21,6 +21,7 @@ import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 import org.johnnei.sgp.internal.model.diff.HunkRange;
 import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
+import org.johnnei.sgp.test.MockIssue;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isA;
@@ -30,7 +31,6 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -196,13 +196,11 @@ public class CommitCommenterTest {
 		GitlabAPI apiMock = mock(GitlabAPI.class);
 		GitlabProject projectMock = mock(GitlabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
-		PostJobIssue issueMock = mock(PostJobIssue.class);
-		InputComponent inputComponentMock = mock(InputComponent.class);
 
 		CommitComment commentMock = mock(CommitComment.class);
 		when(commentMock.getLine()).thenReturn(Integer.toString(line));
 		when(commentMock.getPath()).thenReturn(path);
-		when(commentMock.getNote()).thenReturn(message);
+		when(commentMock.getNote()).thenReturn(":bangbang: " + message);
 
 		CommitComment summaryMock = mock(CommitComment.class);
 		when(summaryMock.getPath()).thenReturn(null);
@@ -213,10 +211,7 @@ public class CommitCommenterTest {
 
 		when(projectMock.getId()).thenReturn(projectId);
 
-		when(inputComponentMock.isFile()).thenReturn(true);
-		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
-		when(issueMock.message()).thenReturn(message);
-		when(issueMock.line()).thenReturn(line);
+		PostJobIssue issueMock = MockIssue.mockInlineIssue(path, line, Severity.CRITICAL, message);
 
 		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, diff, path)));
 		when(reportMock.getBuildCommitSha()).thenReturn(hash);
@@ -228,14 +223,6 @@ public class CommitCommenterTest {
 		cut.process(reportMock);
 
 		verify(apiMock).getCommitComments(projectId, hash);
-		verify(apiMock, never()).createCommitComment(
-			eq(projectId),
-			eq(hash),
-			eq(message),
-			eq(path),
-			eq(Integer.toString(line)),
-			eq("new")
-		);
 		verifyNoMoreInteractions(apiMock);
 	}
 
@@ -247,8 +234,6 @@ public class CommitCommenterTest {
 		GitlabAPI apiMock = mock(GitlabAPI.class);
 		GitlabProject projectMock = mock(GitlabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
-		PostJobIssue issueMock = mock(PostJobIssue.class);
-		InputComponent inputComponentMock = mock(InputComponent.class);
 
 		CommitComment commentMock = mock(CommitComment.class);
 		when(commentMock.getLine()).thenReturn(Integer.toString(line));
@@ -264,15 +249,8 @@ public class CommitCommenterTest {
 
 		when(projectMock.getId()).thenReturn(projectId);
 
-		when(inputComponentMock.isFile()).thenReturn(true);
-		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
-		when(issueMock.message()).thenReturn(message);
-		when(issueMock.line()).thenReturn(line);
-
-		PostJobIssue newIssueMock = mock(PostJobIssue.class);
-		when(newIssueMock.inputComponent()).thenReturn(inputComponentMock);
-		when(newIssueMock.message()).thenReturn(message);
-		when(newIssueMock.line()).thenReturn(88);
+		PostJobIssue issueMock = MockIssue.mockInlineIssue(path, line, Severity.CRITICAL, message);
+		PostJobIssue newIssueMock = MockIssue.mockInlineIssue("/not/my/file.java", 88, Severity.MAJOR, message);
 
 		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, diff, path), new MappedIssue(newIssueMock, diff, "/not/my/file.java")));
 		when(reportMock.getBuildCommitSha()).thenReturn(hash);
@@ -287,7 +265,7 @@ public class CommitCommenterTest {
 		verify(apiMock).createCommitComment(
 			eq(projectId),
 			eq(hash),
-			eq(message),
+			eq(":exclamation: Remove this violation!"),
 			eq("/not/my/file.java"),
 			eq(Integer.toString(88)),
 			eq("new")
@@ -303,8 +281,6 @@ public class CommitCommenterTest {
 		GitlabAPI apiMock = mock(GitlabAPI.class);
 		GitlabProject projectMock = mock(GitlabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
-		PostJobIssue issueMock = mock(PostJobIssue.class);
-		InputComponent inputComponentMock = mock(InputComponent.class);
 
 		String hash = "a2b4";
 		String path = "/my/file.java";
@@ -313,10 +289,7 @@ public class CommitCommenterTest {
 
 		when(projectMock.getId()).thenReturn(projectId);
 
-		when(inputComponentMock.isFile()).thenReturn(true);
-		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
-		when(issueMock.message()).thenReturn("Remove this violation!");
-		when(issueMock.line()).thenReturn(line);
+		PostJobIssue issueMock = MockIssue.mockInlineIssue(path, line, Severity.CRITICAL, "Remote this violation!");
 
 		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, diff, path)));
 		when(reportMock.getBuildCommitSha()).thenReturn(hash);
@@ -345,8 +318,6 @@ public class CommitCommenterTest {
 		GitlabAPI apiMock = mock(GitlabAPI.class);
 		GitlabProject projectMock = mock(GitlabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
-		PostJobIssue issueMock = mock(PostJobIssue.class);
-		InputComponent inputComponentMock = mock(InputComponent.class);
 
 		String hash = "a2b4";
 		String path = "/my/file.java";
@@ -355,10 +326,7 @@ public class CommitCommenterTest {
 
 		when(projectMock.getId()).thenReturn(projectId);
 
-		when(inputComponentMock.isFile()).thenReturn(true);
-		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
-		when(issueMock.message()).thenReturn("Remove this violation!");
-		when(issueMock.line()).thenReturn(line);
+		PostJobIssue issueMock = MockIssue.mockInlineIssue(path, line, Severity.CRITICAL, "Remove this violation!");
 
 		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(issueMock, diff, path)));
 		when(reportMock.getBuildCommitSha()).thenReturn(hash);

@@ -130,13 +130,18 @@ public class CommitCommenter {
 	 * @return <code>true</code> when a comment with the same text on the same line has been found.
 	 */
 	private static boolean isExisting(MappedIssue issue, List<CommitComment> existingComments) {
-		LOGGER.debug("isExisting(issue[path={}, line={}, message={}])", issue.getPath(), issue.getIssue().line(), issue.getIssue().message());
-		existingComments.forEach(comment -> LOGGER.debug("comment(path={}, line={}, message={}])", comment.getPath(), comment.getLine(), comment.getNote()));
+		LOGGER.debug(
+			"isExisting(issue[path={}, line={}, message={}], existingComments.size={})",
+			issue.getPath(),
+			issue.getIssue().line(),
+			issue.getIssue().message(),
+			existingComments.size()
+		);
 		return existingComments.stream()
 			.filter(comment -> comment.getPath() != null)
 			.filter(comment -> Objects.equals(comment.getPath(), issue.getPath()))
 			.filter(comment -> Objects.equals(comment.getLine(), Integer.toString(issue.getIssue().line())))
-			.anyMatch(comment -> Objects.equals(comment.getNote(), issue.getIssue().message()));
+			.anyMatch(comment -> comment.getNote().endsWith(issue.getIssue().message()));
 	}
 
 	/**
@@ -147,11 +152,16 @@ public class CommitCommenter {
 	 * @return <code>true</code> when the comment was successfully created. Otherwise <code>false</code>.
 	 */
 	private boolean postComment(SonarReport report, MappedIssue mappedIssue) {
+
+		MarkdownBuilder messageBuilder = new MarkdownBuilder();
+		messageBuilder.addSeverityIcon(mappedIssue.getIssue().severity());
+		messageBuilder.addText(mappedIssue.getIssue().message());
+
 		try {
 			gitlabApi.createCommitComment(
 				report.getProject().getId(),
 				mappedIssue.getCommitSha(),
-				mappedIssue.getIssue().message(),
+				messageBuilder.toString(),
 				mappedIssue.getPath(),
 				formatLineNumber(mappedIssue),
 				"new"
