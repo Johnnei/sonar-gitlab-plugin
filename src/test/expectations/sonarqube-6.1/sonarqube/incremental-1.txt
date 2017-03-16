@@ -2,7 +2,7 @@
 :exclamation: Remove this useless assignment to local variable "inputStream".
 :negative_squared_cross_mark: Close this "FileInputStream".
 :exclamation: Either log or rethrow this exception.
-":information_source: Do not forget to remove this deprecated code someday.
+:information_source: Do not forget to remove this deprecated code someday.
 :grey_exclamation: Replace this "switch" statement by "if" statements to increase readability.
 :exclamation: Add a default case to this switch.
 :exclamation: Reduce this switch case number of lines from 10 to at most 5, for example by extracting code into methods.
