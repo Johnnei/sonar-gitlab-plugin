@@ -88,20 +88,20 @@ SQ-6.0-GL-8.15:
       GITLAB_VERSION: "8.15.2-ce.0"
 
 # Test compatibility with GitLab versions
+SQ-LTS-GL-8.17:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "lts"
+      GITLAB_VERSION: "8.17.0-ce.0"
+
+SQ-LTS-GL-8.16:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "lts"
+      GITLAB_VERSION: "8.16.0-ce.0"
+
 SQ-LTS-GL-8.15:
     <<: *it_template
     variables:
       SONAR_VERSION: "lts"
       GITLAB_VERSION: "8.15.2-ce.0"
-
-SQ-LTS-GL-8.14:
-    <<: *it_template
-    variables:
-      SONAR_VERSION: "lts"
-      GITLAB_VERSION: "8.14.5-ce.0"
-
-SQ-LTS-GL-8.13:
-    <<: *it_template
-    variables:
-      SONAR_VERSION: "lts"
-      GITLAB_VERSION: "8.13.10-ce.0"
