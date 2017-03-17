@@ -1,5 +1,8 @@
 # Unreleased
 
+## Compatibility Changes
+- [SGP-35](https://jira.johnnei.org/browse/SGP-35): Update compliance to validate support against GitLab 8.15, 8.16 and 8.17.
+
 ## New Features
 - [SGP-17](https://jira.johnnei.org/browse/SGP-17): Accurately create inline comments when multiple new commits have been made since last analysis.
 - [SGP-14](https://jira.johnnei.org/browse/SGP-14): Break the GitLab Pipeline when critical or worse issues are introduced.
