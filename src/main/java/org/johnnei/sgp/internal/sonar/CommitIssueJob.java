@@ -104,10 +104,7 @@ public class CommitIssueJob implements PostJob {
 			return Stream.empty();
 		}
 
-		return findDiff(path, issue, diffs).map(diff -> {
-			LOGGER.debug("getFilePath({}) -> {} | Diff path: {}", ((InputFile) issue.inputComponent()).file(), path, diff.getFilepath());
-			return Stream.of(new MappedIssue(issue, diff, path));
-		}).orElseGet(() -> {
+		return findDiff(path, issue, diffs).map(diff -> Stream.of(new MappedIssue(issue, diff, path))).orElseGet(() -> {
 			LOGGER.warn("Failed to find diff for issue \"{}\" in \"{}\"", issue.message(), issue.inputComponent());
 			return Stream.empty();
 		});

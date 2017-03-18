@@ -73,6 +73,7 @@ public abstract class IntegrationTest {
 
 		gitlab.ensureAdminCreated();
 		gitlab.ensureItUserCreated();
+		gitlab.ensureProjectLimitRaised();
 		gitlab.createProject(getClass(), testName);
 
 		prepareGitRepo(repoFolder);
