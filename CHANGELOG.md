@@ -6,6 +6,7 @@
 ## New Features
 - [SGP-17](https://jira.johnnei.org/browse/SGP-17): Accurately create inline comments when multiple new commits have been made since last analysis.
 - [SGP-14](https://jira.johnnei.org/browse/SGP-14): Break the GitLab Pipeline when critical or worse issues are introduced.
+- [SGP-6](https://jira.johnnei.org/browse/SGP-6): The .git folder is no longer mandatory to be available to create comments.
 
 ## Improvements
 - [SGP-19](https://jira.johnnei.org/browse/SGP-19): Add severity icons to inline issue comments.

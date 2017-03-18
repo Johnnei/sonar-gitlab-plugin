@@ -47,6 +47,8 @@ public abstract class IntegrationTest {
 
 	private CommandLine commandLine;
 
+	protected File repoFolder;
+
 	private static String getProperty(String key, String defaultValue) {
 		String value = System.getProperty(key);
 		if (value == null || value.trim().isEmpty() || value.contains("$")) {
@@ -66,16 +68,22 @@ public abstract class IntegrationTest {
 
 	@Before
 	public void setUp() throws Exception {
-		File repo = temporaryFolder.newFolder("repo");
-		commandLine = new CommandLine(OS_SHELL, OS_COMMAND, repo);
-		sonarqube = new SonarQubeSupport(gitlab, commandLine, SONARQUBE_HOST);
-		git = new GitSupport(commandLine);
+		repoFolder = temporaryFolder.newFolder("repo");
+		prepareAccessOnFolder(repoFolder);
 
 		gitlab.ensureAdminCreated();
 		gitlab.ensureItUserCreated();
+		gitlab.ensureProjectLimitRaised();
 		gitlab.createProject(getClass(), testName);
 
-		prepareGitRepo(repo);
+		prepareGitRepo(repoFolder);
+	}
+
+	protected void prepareAccessOnFolder(File folder) {
+		LOGGER.info("Configured command line working directory to: {}", folder.getAbsolutePath());
+		commandLine = new CommandLine(OS_SHELL, OS_COMMAND, folder);
+		sonarqube = new SonarQubeSupport(gitlab, commandLine, SONARQUBE_HOST);
+		git = new GitSupport(commandLine);
 	}
 
 	private void prepareGitRepo(File repo) throws IOException {

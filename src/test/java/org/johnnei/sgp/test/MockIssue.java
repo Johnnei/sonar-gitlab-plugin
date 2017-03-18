@@ -15,6 +15,7 @@ public class MockIssue {
 		InputFile inputComponentMock = mock(InputFile.class);
 		when(inputComponentMock.isFile()).thenReturn(true);
 		when(inputComponentMock.file()).thenReturn(file);
+		when(inputComponentMock.absolutePath()).thenReturn(file.getAbsolutePath());
 
 		PostJobIssue issueMock = mock(PostJobIssue.class);
 		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
@@ -25,9 +26,14 @@ public class MockIssue {
 	}
 
 	public static PostJobIssue mockInlineIssue(String file, int line, Severity severity, String message) {
+		return mockInlineIssue(new File(file), line, severity, message);
+	}
+
+	public static PostJobIssue mockInlineIssue(File file, int line, Severity severity, String message) {
 		InputFile inputComponentMock = mock(InputFile.class);
 		when(inputComponentMock.isFile()).thenReturn(true);
-		when(inputComponentMock.file()).thenReturn(new File(file));
+		when(inputComponentMock.file()).thenReturn(file);
+		when(inputComponentMock.absolutePath()).thenReturn(file.getAbsolutePath());
 
 		PostJobIssue issueMock = mock(PostJobIssue.class);
 		when(issueMock.inputComponent()).thenReturn(inputComponentMock);

@@ -1,5 +1,6 @@
 package org.johnnei.sgp.it;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
@@ -20,6 +21,36 @@ public class CommentOnCommitIT extends IntegrationTest {
 
 	@Test
 	public void testCommentsAreCreated() throws IOException {
+		prepareFeatureBranch();
+		String commitHash = accessGit().commitAll();
+		accessSonarQube().runAnalysis(commitHash);
+
+		List<String> comments = accessGitlab().getCommitComments(commitHash);
+
+		List<String> messages = Files.readAllLines(getTestResource("sonarqube/issues.txt"));
+
+		for (String message : messages) {
+			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
+			removeMatchedComment(comments, message);
+		}
+
+		assertThat(
+			String.format("%s Issues have been reported and thus comments should be there.", messages.size()),
+			comments,
+			IsEmptyCollection.empty()
+		);
+	}
+
+	@Test
+	public void testCommentsAreCreatedWhenScanIsInvokedFromSubProject() throws IOException {
+		File repo2 = new File(repoFolder.getParentFile(), "repo2");
+		File subFolder = new File(repo2, "sub-folder");
+		assertThat("Failed to create sub folder for test", repo2.mkdirs());
+		assertThat("Failed to move source to sub directory", repoFolder.renameTo(subFolder));
+		assertThat("Failed to restore git folder back to root.", new File(subFolder, ".git").renameTo(new File(repo2, ".git")));
+
+		prepareAccessOnFolder(subFolder);
+
 		prepareFeatureBranch();
 		String commitHash = accessGit().commitAll();
 		accessSonarQube().runAnalysis(commitHash);

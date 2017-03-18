@@ -1,8 +1,6 @@
 package org.johnnei.sgp.internal.sonar;
 
 import javax.annotation.CheckForNull;
-
-import java.io.File;
 import java.io.IOException;
 
 import org.gitlab.api.GitlabAPI;
@@ -30,8 +28,6 @@ public class GitLabPluginConfiguration {
 	private final Settings settings;
 
 	private GitlabProject project;
-
-	private File gitBaseDir;
 
 	public GitLabPluginConfiguration(Settings settings) {
 		this.settings = settings;
@@ -111,14 +107,6 @@ public class GitLabPluginConfiguration {
 				projectName
 			)));
 		stopwatch.stop();
-	}
-
-	public void setBaseDir(File gitBaseDir) {
-		this.gitBaseDir = gitBaseDir;
-	}
-
-	public File getGitBaseDir() {
-		return gitBaseDir;
 	}
 
 	public GitlabProject getProject() {

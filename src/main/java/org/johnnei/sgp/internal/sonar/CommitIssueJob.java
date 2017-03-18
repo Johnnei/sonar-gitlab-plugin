@@ -3,7 +3,9 @@ package org.johnnei.sgp.internal.sonar;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -16,7 +18,6 @@ import org.sonar.api.batch.postjob.PostJob;
 import org.sonar.api.batch.postjob.PostJobContext;
 import org.sonar.api.batch.postjob.PostJobDescriptor;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
-import org.sonar.api.scan.filesystem.PathResolver;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
@@ -38,13 +39,13 @@ import static org.sonar.api.batch.InstantiationStrategy.PER_BATCH;
 @InstantiationStrategy(PER_BATCH)
 public class CommitIssueJob implements PostJob {
 
+	private static final Pattern SANATIZE_PATH_PATTERN = Pattern.compile("\\\\");
+
 	private static final Logger LOGGER = Loggers.get(CommitIssueJob.class);
 
 	private final GitLabPluginConfiguration configuration;
 
 	private final DiffFetcher diffFetcher;
-
-	private final PathResolver pathResolver;
 
 	private final PipelineBreaker pipelineBreaker;
 
@@ -52,7 +53,6 @@ public class CommitIssueJob implements PostJob {
 		this.configuration = configuration;
 		this.diffFetcher = diffFetcher;
 		this.pipelineBreaker = pipelineBreaker;
-		this.pathResolver = new PathResolver();
 	}
 
 	@Override
@@ -98,7 +98,7 @@ public class CommitIssueJob implements PostJob {
 	 * @return The Stream containing the mapped issue or an empty stream on failure.
 	 */
 	private Stream<MappedIssue> mapIssueToFile(PostJobIssue issue, Collection<UnifiedDiff> diffs) {
-		String path = getFilePath(issue.inputComponent());
+		String path = getFilePath(issue.inputComponent(), diffs);
 		if (path == null) {
 			LOGGER.warn("Failed to find file for \"{}\" in \"{}\"", issue.message(), issue.inputComponent());
 			return Stream.empty();
@@ -111,13 +111,29 @@ public class CommitIssueJob implements PostJob {
 	}
 
 	@CheckForNull
-	private String getFilePath(@CheckForNull InputComponent inputComponent) {
+	private String getFilePath(@CheckForNull InputComponent inputComponent, Collection<UnifiedDiff> diffs) {
 		if (inputComponent == null || !inputComponent.isFile()) {
 			return null;
 		}
 
 		InputFile inputFile = (InputFile) inputComponent;
-		return pathResolver.relativePath(configuration.getGitBaseDir(), inputFile.file());
+
+		String issueFilePath = SANATIZE_PATH_PATTERN.matcher(inputFile.absolutePath()).replaceAll("/");
+		List<String> paths = diffs.stream()
+			.filter(diff -> issueFilePath.endsWith(diff.getFilepath()))
+			.map(UnifiedDiff::getFilepath)
+			.collect(Collectors.toList());
+		if (paths.isEmpty()) {
+			return null;
+		} else if (paths.size() == 1) {
+			return paths.get(0);
+		}
+
+		throw new IllegalStateException(String.format(
+			"Multiple paths in git repository matched for issue in file: %s. (Matches: %s)",
+			issueFilePath,
+			paths.stream().reduce((a, b) -> a + ", " + b)
+		));
 	}
 
 	/**

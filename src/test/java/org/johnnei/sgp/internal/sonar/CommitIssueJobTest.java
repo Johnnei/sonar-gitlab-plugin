@@ -1,6 +1,7 @@
 package org.johnnei.sgp.internal.sonar;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -17,13 +18,12 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.powermock.reflect.Whitebox;
 import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.postjob.PostJobContext;
 import org.sonar.api.batch.postjob.PostJobDescriptor;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
-import org.sonar.api.scan.filesystem.PathResolver;
+import org.sonar.api.batch.rule.Severity;
 import org.sonar.api.utils.log.LogTester;
 
 import org.johnnei.sgp.internal.gitlab.CommitCommenter;
@@ -31,6 +31,7 @@ import org.johnnei.sgp.internal.gitlab.DiffFetcher;
 import org.johnnei.sgp.internal.gitlab.PipelineBreaker;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
+import org.johnnei.sgp.internal.model.diff.HunkRange;
 import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
 import org.johnnei.sgp.test.MockIssue;
 
@@ -38,7 +39,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -60,9 +60,6 @@ public class CommitIssueJobTest {
 
 	@Mock
 	private GitLabPluginConfiguration configurationMock;
-
-	@Mock
-	private PathResolver pathResolverMock;
 
 	@Mock
 	private GitlabAPI gitlabApiMock;
@@ -88,7 +85,6 @@ public class CommitIssueJobTest {
 			}
 		};
 
-		Whitebox.setInternalState(cut, PathResolver.class, pathResolverMock);
 		diff = mock(UnifiedDiff.class);
 	}
 
@@ -109,19 +105,12 @@ public class CommitIssueJobTest {
 	public void testExecute() throws Exception {
 		String hash = "a2b4";
 		int projectId = 42;
-		File file = new File("Main.java");
+		File file = new File(new File("src"), "Main.java");
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 
-		PostJobIssue issueMock = mock(PostJobIssue.class);
+		PostJobIssue issueMock = MockIssue.mockInlineIssue(file, 3, Severity.CRITICAL, "Steeeevvveee!");
 		GitlabProject projectMock = mock(GitlabProject.class);
 		when(projectMock.getId()).thenReturn(projectId);
-		InputFile inputComponentMock = mock(InputFile.class);
-
-		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
-		when(issueMock.line()).thenReturn(3);
-		when(inputComponentMock.isFile()).thenReturn(true);
-		when(inputComponentMock.file()).thenReturn(file);
-		when(pathResolverMock.relativePath(notNull(File.class), eq(file))).thenReturn("src/Main.java");
 
 		String diff = "--- a/src/Main.java\n" +
 			"+++ b/src/Main.java\n" +
@@ -138,7 +127,6 @@ public class CommitIssueJobTest {
 		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Collections.singletonList(new UnifiedDiff(hash, commitDiffOne)));
 
 		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
-		when(configurationMock.getGitBaseDir()).thenReturn(new File("."));
 		when(configurationMock.getCommitHash()).thenReturn(hash);
 		when(configurationMock.getProject()).thenReturn(projectMock);
 
@@ -156,6 +144,90 @@ public class CommitIssueJobTest {
 	}
 
 	@Test
+	public void testExecuteDuplicatePaths() throws Exception {
+		thrown.expect(IllegalStateException.class);
+		thrown.expectMessage("matched");
+
+		String hash = "a2b4";
+		int projectId = 42;
+		File file = new File(new File("src"), "Main.java");
+		PostJobContext postJobContextMock = mock(PostJobContext.class);
+
+		PostJobIssue issueMock = MockIssue.mockInlineIssue(file, 3, Severity.CRITICAL, "Steeeevvveee!");
+		GitlabProject projectMock = mock(GitlabProject.class);
+		when(projectMock.getId()).thenReturn(projectId);
+
+		UnifiedDiff unifiedDiffMock = mock(UnifiedDiff.class);
+		when(unifiedDiffMock.getFilepath()).thenReturn("src/Main.java");
+
+		HunkRange range = mock(HunkRange.class);
+		when(unifiedDiffMock.getRanges()).thenReturn(Collections.singletonList(range));
+		when(range.containsLine(eq(3))).thenReturn(true);
+
+		// This is not a valid state, but I don't know a case in which 2 paths collide as the diff paths contain the full path of the repository.
+		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Arrays.asList(unifiedDiffMock, unifiedDiffMock));
+
+		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
+		when(configurationMock.getCommitHash()).thenReturn(hash);
+		when(configurationMock.getProject()).thenReturn(projectMock);
+
+		cut.execute(postJobContextMock);
+
+		ArgumentCaptor<SonarReport> reportCaptor = ArgumentCaptor.forClass(SonarReport.class);
+
+		verify(commitCommenterMock).process(reportCaptor.capture());
+		verify(pipelineBreaker).process(reportCaptor.getValue());
+
+		SonarReport report = reportCaptor.getValue();
+		assertThat("Project must not have changed", report.getProject(), equalTo(projectMock));
+		assertThat("Commit sha must not have changed", report.getBuildCommitSha(), equalTo(hash));
+		assertThat("The iterable of 1 issue should have result in a stream of 1 issue", report.getIssues().count(), equalTo(1L));
+	}
+
+	@Test
+	public void testExecuteWithWindowsPaths() throws Exception {
+		String hash = "a2b4";
+		int projectId = 42;
+		PostJobContext postJobContextMock = mock(PostJobContext.class);
+
+		GitlabProject projectMock = mock(GitlabProject.class);
+		when(projectMock.getId()).thenReturn(projectId);
+
+		// Don't use utility method as that one will use platform dependant file separators.
+		InputFile inputComponentMock = mock(InputFile.class);
+		when(inputComponentMock.isFile()).thenReturn(true);
+		when(inputComponentMock.absolutePath()).thenReturn("D:\\project\\src\\Main.java");
+
+		PostJobIssue issueMock = mock(PostJobIssue.class);
+		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
+		when(issueMock.message()).thenReturn("Dammit Windows!");
+		when(issueMock.line()).thenReturn(3);
+		when(issueMock.severity()).thenReturn(Severity.CRITICAL);
+
+		UnifiedDiff unifiedDiffMock = mock(UnifiedDiff.class);
+		when(unifiedDiffMock.getFilepath()).thenReturn("src/Main.java");
+
+		HunkRange range = mock(HunkRange.class);
+		when(unifiedDiffMock.getRanges()).thenReturn(Collections.singletonList(range));
+		when(range.containsLine(eq(3))).thenReturn(true);
+
+		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Collections.singletonList(unifiedDiffMock));
+
+		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
+		when(configurationMock.getCommitHash()).thenReturn(hash);
+		when(configurationMock.getProject()).thenReturn(projectMock);
+
+		cut.execute(postJobContextMock);
+
+		ArgumentCaptor<SonarReport> reportCaptor = ArgumentCaptor.forClass(SonarReport.class);
+
+		verify(commitCommenterMock).process(reportCaptor.capture());
+
+		SonarReport report = reportCaptor.getValue();
+		assertThat("The iterable of 1 issue should have result in a stream of 1 issue", report.getIssues().count(), equalTo(1L));
+	}
+
+	@Test
 	public void testExecuteFileIssueOnMovedFile() throws Exception {
 		String hash = "a2b4";
 		int projectId = 42;
@@ -165,7 +237,6 @@ public class CommitIssueJobTest {
 		PostJobIssue issueMock = MockIssue.mockFileIssue(file);
 		GitlabProject projectMock = mock(GitlabProject.class);
 		when(projectMock.getId()).thenReturn(projectId);
-		when(pathResolverMock.relativePath(notNull(File.class), eq(file))).thenReturn("src/Main.java");
 
 		String diff = "--- a/src/main/java/org/johnnei/sgp/it/internal/NoIssue.java\n+++ b/src/main/java/org/johnnei/sgp/it/NoIssue.java\n";
 		GitlabCommitDiff commitDiffOne = mock(GitlabCommitDiff.class);
@@ -177,7 +248,6 @@ public class CommitIssueJobTest {
 		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Collections.singletonList(new UnifiedDiff(hash, commitDiffOne)));
 
 		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
-		when(configurationMock.getGitBaseDir()).thenReturn(new File("."));
 		when(configurationMock.getCommitHash()).thenReturn(hash);
 		when(configurationMock.getProject()).thenReturn(projectMock);
 
@@ -210,7 +280,6 @@ public class CommitIssueJobTest {
 		GitlabProject projectMock = mock(GitlabProject.class);
 
 		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
-		when(configurationMock.getGitBaseDir()).thenReturn(new File("."));
 		when(configurationMock.getCommitHash()).thenReturn(hash);
 		when(configurationMock.getProject()).thenReturn(projectMock);
 

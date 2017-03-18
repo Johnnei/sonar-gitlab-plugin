@@ -21,6 +21,7 @@ import org.gitlab.api.models.GitlabAccessLevel;
 import org.gitlab.api.models.GitlabCommitStatus;
 import org.gitlab.api.models.GitlabProject;
 import org.gitlab.api.models.GitlabSession;
+import org.gitlab.api.models.GitlabUser;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,6 +146,30 @@ public class GitLabSupport {
 			LOGGER.info("Logged in as {}.", INTEGRATION_USER);
 		} else {
 			LOGGER.info("Re-using existing GitLab session.");
+		}
+	}
+
+	public void ensureProjectLimitRaised() throws IOException {
+		GitlabUser user = rootUser.getUser();
+		if (user.getProjectsLimit() < 1000) {
+			user = rootUser.updateUser(
+				user.getId(),
+				user.getEmail(),
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				1000,
+				null,
+				null,
+				null,
+				null,
+				null
+			);
+			assertThat("Project limit should be raised in order to be able to run all tests.", user.getProjectsLimit(), equalTo(1000));
 		}
 	}
 
