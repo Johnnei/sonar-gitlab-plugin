@@ -39,7 +39,7 @@ import static org.sonar.api.batch.InstantiationStrategy.PER_BATCH;
 @InstantiationStrategy(PER_BATCH)
 public class CommitIssueJob implements PostJob {
 
-	private Pattern SANATIZE_PATH_PATTERN = Pattern.compile("\\\\");
+	private static final Pattern SANATIZE_PATH_PATTERN = Pattern.compile("\\\\");
 
 	private static final Logger LOGGER = Loggers.get(CommitIssueJob.class);
 
