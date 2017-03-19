@@ -3,6 +3,7 @@ package org.johnnei.sgp.internal.sonar;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -98,42 +99,29 @@ public class CommitIssueJob implements PostJob {
 	 * @return The Stream containing the mapped issue or an empty stream on failure.
 	 */
 	private Stream<MappedIssue> mapIssueToFile(PostJobIssue issue, Collection<UnifiedDiff> diffs) {
-		String path = getFilePath(issue.inputComponent(), diffs);
-		if (path == null) {
+		List<UnifiedDiff> paths = findDiffByPath(issue.inputComponent(), diffs);
+		if (paths.isEmpty()) {
 			LOGGER.warn("Failed to find file for \"{}\" in \"{}\"", issue.message(), issue.inputComponent());
 			return Stream.empty();
 		}
 
-		return findDiff(path, issue, diffs).map(diff -> Stream.of(new MappedIssue(issue, diff, path))).orElseGet(() -> {
+		return findDiff(issue, paths).map(diff -> Stream.of(new MappedIssue(issue, diff, diff.getFilepath()))).orElseGet(() -> {
 			LOGGER.warn("Failed to find diff for issue \"{}\" in \"{}\"", issue.message(), issue.inputComponent());
 			return Stream.empty();
 		});
 	}
 
-	@CheckForNull
-	private String getFilePath(@CheckForNull InputComponent inputComponent, Collection<UnifiedDiff> diffs) {
+	private List<UnifiedDiff> findDiffByPath(@CheckForNull InputComponent inputComponent, Collection<UnifiedDiff> diffs) {
 		if (inputComponent == null || !inputComponent.isFile()) {
-			return null;
+			return Collections.emptyList();
 		}
 
 		InputFile inputFile = (InputFile) inputComponent;
 
 		String issueFilePath = SANATIZE_PATH_PATTERN.matcher(inputFile.absolutePath()).replaceAll("/");
-		List<String> paths = diffs.stream()
+		return diffs.stream()
 			.filter(diff -> issueFilePath.endsWith(diff.getFilepath()))
-			.map(UnifiedDiff::getFilepath)
 			.collect(Collectors.toList());
-		if (paths.isEmpty()) {
-			return null;
-		} else if (paths.size() == 1) {
-			return paths.get(0);
-		}
-
-		throw new IllegalStateException(String.format(
-			"Multiple paths in git repository matched for issue in file: %s. (Matches: %s)",
-			issueFilePath,
-			paths.stream().reduce((a, b) -> a + ", " + b)
-		));
 	}
 
 	/**
@@ -142,10 +130,9 @@ public class CommitIssueJob implements PostJob {
 	 * @param diffs The list of diffs in the commit.
 	 * @return <code>true</code> when the issue is on a modified line. Otherwise <code>false</code>.
 	 */
-	private static Optional<UnifiedDiff> findDiff(String path, PostJobIssue issue, Collection<UnifiedDiff> diffs) {
+	private static Optional<UnifiedDiff> findDiff(PostJobIssue issue, Collection<UnifiedDiff> diffs) {
 		Stream<UnifiedDiff> stream = diffs.stream()
-			.filter(diff -> !diff.getRanges().isEmpty())
-			.filter(diff -> diff.getFilepath().equals(path));
+			.filter(diff -> !diff.getRanges().isEmpty());
 
 		if (issue.line() != null) {
 			stream = stream.filter(diff -> diff.getRanges().stream().anyMatch(range -> range.containsLine(issue.line())));

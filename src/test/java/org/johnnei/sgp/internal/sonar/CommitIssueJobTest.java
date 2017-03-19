@@ -37,6 +37,8 @@ import org.johnnei.sgp.test.MockIssue;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -144,10 +146,7 @@ public class CommitIssueJobTest {
 	}
 
 	@Test
-	public void testExecuteDuplicatePaths() throws Exception {
-		thrown.expect(IllegalStateException.class);
-		thrown.expectMessage("matched");
-
+	public void testExecuteNotFoundInDiff() throws Exception {
 		String hash = "a2b4";
 		int projectId = 42;
 		File file = new File(new File("src"), "Main.java");
@@ -157,15 +156,60 @@ public class CommitIssueJobTest {
 		GitlabProject projectMock = mock(GitlabProject.class);
 		when(projectMock.getId()).thenReturn(projectId);
 
+		UnifiedDiff diffMock = mock(UnifiedDiff.class);
+		when(diffMock.getCommitSha()).thenReturn(hash);
+		when(diffMock.getFilepath()).thenReturn("src/Main.java");
+		HunkRange range = mock(HunkRange.class);
+		when(range.containsLine(anyInt())).thenReturn(false);
+		when(diffMock.getRanges()).thenReturn(Collections.singletonList(range));
+
+		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Collections.singletonList(diffMock));
+
+		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
+		when(configurationMock.getCommitHash()).thenReturn(hash);
+		when(configurationMock.getProject()).thenReturn(projectMock);
+
+		cut.execute(postJobContextMock);
+
+		ArgumentCaptor<SonarReport> reportCaptor = ArgumentCaptor.forClass(SonarReport.class);
+
+		verify(commitCommenterMock).process(reportCaptor.capture());
+		verify(pipelineBreaker).process(reportCaptor.getValue());
+
+		SonarReport report = reportCaptor.getValue();
+		assertThat("Project must not have changed", report.getProject(), equalTo(projectMock));
+		assertThat("Commit sha must not have changed", report.getBuildCommitSha(), equalTo(hash));
+		assertThat("The iterable of 1 issue should have result in a stream of 1 issue", report.getIssues().count(), equalTo(0L));
+	}
+
+	@Test
+	public void testExecuteDuplicatePaths() throws Exception {
+		String hash = "a2b4";
+		int projectId = 42;
+		File file = new File(new File("src"), "Main.java");
+		PostJobContext postJobContextMock = mock(PostJobContext.class);
+
+		PostJobIssue issueMock = MockIssue.mockInlineIssue(file, 12, Severity.CRITICAL, "Steeeevvveee!");
+		GitlabProject projectMock = mock(GitlabProject.class);
+		when(projectMock.getId()).thenReturn(projectId);
+
 		UnifiedDiff unifiedDiffMock = mock(UnifiedDiff.class);
 		when(unifiedDiffMock.getFilepath()).thenReturn("src/Main.java");
 
 		HunkRange range = mock(HunkRange.class);
 		when(unifiedDiffMock.getRanges()).thenReturn(Collections.singletonList(range));
+		when(range.containsLine(anyInt())).thenReturn(false);
 		when(range.containsLine(eq(3))).thenReturn(true);
 
-		// This is not a valid state, but I don't know a case in which 2 paths collide as the diff paths contain the full path of the repository.
-		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Arrays.asList(unifiedDiffMock, unifiedDiffMock));
+		UnifiedDiff unifiedDiffMockTwo = mock(UnifiedDiff.class);
+		HunkRange rangeTwo = mock(HunkRange.class);
+		when(unifiedDiffMockTwo.getRanges()).thenReturn(Collections.singletonList(rangeTwo));
+		when(rangeTwo.containsLine(anyInt())).thenReturn(false);
+		when(rangeTwo.containsLine(12)).thenReturn(true);
+		when(unifiedDiffMockTwo.getFilepath()).thenReturn("src/Main.java");
+
+		// This state seems invalid, but when the analysis contains two commits editing the same file there will be two diff instances for the same file.
+		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Arrays.asList(unifiedDiffMock, unifiedDiffMockTwo));
 
 		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
 		when(configurationMock.getCommitHash()).thenReturn(hash);
@@ -182,6 +226,11 @@ public class CommitIssueJobTest {
 		assertThat("Project must not have changed", report.getProject(), equalTo(projectMock));
 		assertThat("Commit sha must not have changed", report.getBuildCommitSha(), equalTo(hash));
 		assertThat("The iterable of 1 issue should have result in a stream of 1 issue", report.getIssues().count(), equalTo(1L));
+		assertThat(
+			"Issue should have been matched on the nearest matched diff",
+			report.getIssues().findFirst().orElseThrow(() -> new AssertionError("Issue not found.")).getDiff(),
+			sameInstance(unifiedDiffMockTwo)
+		);
 	}
 
 	@Test
@@ -225,6 +274,58 @@ public class CommitIssueJobTest {
 
 		SonarReport report = reportCaptor.getValue();
 		assertThat("The iterable of 1 issue should have result in a stream of 1 issue", report.getIssues().count(), equalTo(1L));
+	}
+
+	@Test
+	public void testExecuteFileIssue() throws Exception {
+		String hash = "a2b4";
+		int projectId = 42;
+		File file = getFile("src", "main", "java", "org", "johnnei", "sgp", "it", "NoIssue.java");
+		PostJobContext postJobContextMock = mock(PostJobContext.class);
+
+		PostJobIssue issueMock = MockIssue.mockFileIssue(file);
+		GitlabProject projectMock = mock(GitlabProject.class);
+		when(projectMock.getId()).thenReturn(projectId);
+
+		String diff = "--- a/src/main/java/org/johnnei/sgp/it/NoIssue.java\n" +
+			"+++ b/src/main/java/org/johnnei/sgp/it/NoIssue.java\n" +
+			"@@ -1,5 +1,5 @@\n" +
+			"-package org.johnnei.sgp;\n" +
+			"+package org.johnnei.sgp.it;\n" +
+			" \n" +
+			" import java.io.IOException;\n" +
+			" import java.nio.file.Files;";
+
+		GitlabCommitDiff commitDiffOne = mock(GitlabCommitDiff.class);
+		when(commitDiffOne.getDiff()).thenReturn(diff);
+		when(commitDiffOne.getOldPath()).thenReturn("src/main/java/org/johnnei/sgp/it/NoIssue.java");
+		when(commitDiffOne.getNewPath()).thenReturn("src/main/java/org/johnnei/sgp/it/NoIssue.java");
+		when(commitDiffOne.getRenamedFile()).thenReturn(false);
+
+		when(diffFetcherMock.getDiffs()).thenAnswer(invocation -> Collections.singletonList(new UnifiedDiff(hash, commitDiffOne)));
+
+		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
+		when(configurationMock.getCommitHash()).thenReturn(hash);
+		when(configurationMock.getProject()).thenReturn(projectMock);
+
+		cut.execute(postJobContextMock);
+
+		ArgumentCaptor<SonarReport> reportCaptor = ArgumentCaptor.forClass(SonarReport.class);
+
+		verify(commitCommenterMock).process(reportCaptor.capture());
+
+		SonarReport report = reportCaptor.getValue();
+		assertThat("Project must not have changed", report.getProject(), equalTo(projectMock));
+		assertThat("Commit sha must not have changed", report.getBuildCommitSha(), equalTo(hash));
+		assertThat("The file level issue that hasn't been moved should be commented.", report.getIssues().count(), equalTo(1L));
+	}
+
+	private File getFile(String... paths) {
+		File file = new File(paths[0]);
+		for (int i = 1; i < paths.length; i++) {
+			file = new File(file, paths[i]);
+		}
+		return file;
 	}
 
 	@Test
