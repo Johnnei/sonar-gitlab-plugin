@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.2.0 (2017-03-25)
+No changes since last rc.
+
+# 0.2.0-rc.1 (2017-03-19)
 ## Compatibility Changes
 - [SGP-35](https://jira.johnnei.org/browse/SGP-35): Update compliance to validate support against GitLab 8.15, 8.16 and 8.17.
 - [SGP-36](https://jira.johnnei.org/browse/SGP-36): Update compliance to validate support against SonarQube 6.3
