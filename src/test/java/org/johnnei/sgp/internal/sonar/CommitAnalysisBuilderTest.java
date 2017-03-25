@@ -3,7 +3,6 @@ package org.johnnei.sgp.internal.sonar;
 import java.io.File;
 import java.io.IOException;
 
-import org.gitlab.api.GitlabAPI;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -13,8 +12,6 @@ import org.sonar.api.batch.bootstrap.ProjectBuilder;
 import org.sonar.api.batch.bootstrap.ProjectDefinition;
 import org.sonar.api.batch.bootstrap.ProjectReactor;
 import org.sonar.api.utils.log.LogTester;
-
-import org.johnnei.sgp.sonar.GitLabPlugin;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.isA;
@@ -61,7 +58,6 @@ public class CommitAnalysisBuilderTest {
 		cut.build(contextMock);
 
 		verify(configurationMock).initialiseProject();
-		verify(configurationMock).setBaseDir(temporaryFolder.getRoot());
 	}
 
 	@Test

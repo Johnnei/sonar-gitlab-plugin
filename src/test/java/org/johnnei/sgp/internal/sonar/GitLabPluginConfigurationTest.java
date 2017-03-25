@@ -15,6 +15,8 @@ import org.junit.rules.ExpectedException;
 import org.sonar.api.config.Settings;
 import org.sonar.api.utils.log.LogTester;
 
+import org.johnnei.sgp.sonar.GitLabPlugin;
+
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -62,6 +64,13 @@ public class GitLabPluginConfigurationTest {
 		String hash = "a4b8";
 		when(settingsMock.getString("sonar.gitlab.analyse.commit")).thenReturn(hash);
 		assertThat("Invalid hash has been returned. Value from settings should be used.", cut.getCommitHash(), equalTo(hash));
+	}
+
+	@Test
+	public void testGetBaseBranch() {
+		String baseBranch = "develop";
+		when(settingsMock.getString("sonar.gitlab.analyse.base")).thenReturn(baseBranch);
+		assertThat("Invalid branch has been returned. Value from settings should be used.", cut.getBaseBranch(), equalTo(baseBranch));
 	}
 
 	@Test
@@ -187,6 +196,15 @@ public class GitLabPluginConfigurationTest {
 		when(settingsMock.getString("sonar.gitlab.auth.token")).thenReturn("secure");
 
 		cut.initialiseProject();
+	}
+
+	@Test
+	public void testIsBreakPipelineEnabled() throws Exception {
+		when(settingsMock.getBoolean(GitLabPlugin.GITLAB_BREAK_PIPELINE)).thenReturn(true);
+
+		assertThat("Settings value should have been used", cut.isBreakPipelineEnabled(), is(true));
+
+		verify(settingsMock).getBoolean("sonar.gitlab.pipeline.break");
 	}
 
 	private static final class GitLabPluginConfigurationMock extends GitLabPluginConfiguration {

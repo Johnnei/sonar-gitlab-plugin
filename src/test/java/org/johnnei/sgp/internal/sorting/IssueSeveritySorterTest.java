@@ -1,10 +1,12 @@
 package org.johnnei.sgp.internal.sorting;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.batch.rule.Severity;
 
 import org.johnnei.sgp.internal.model.MappedIssue;
+import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -14,6 +16,13 @@ import static org.mockito.Mockito.when;
 public class IssueSeveritySorterTest {
 
 	private IssueSeveritySorter cut = new IssueSeveritySorter();
+
+	private UnifiedDiff diff;
+
+	@Before
+	public void setUp() throws Exception {
+		diff = mock(UnifiedDiff.class);
+	}
 
 	@Test
 	public void testCompareEqual() throws Exception {
@@ -25,7 +34,7 @@ public class IssueSeveritySorterTest {
 
 		assertThat(
 			"The same severity should report that they are equal.",
-			cut.compare(new MappedIssue(issueOne, ""), new MappedIssue(issueTwo, "")),
+			cut.compare(new MappedIssue(issueOne, diff, ""), new MappedIssue(issueTwo, diff, "")),
 			equalTo(0)
 		);
 	}
@@ -40,7 +49,7 @@ public class IssueSeveritySorterTest {
 
 		assertThat(
 			"The same severity should report that they are equal.",
-			cut.compare(new MappedIssue(issueOne, ""), new MappedIssue(issueTwo, "")),
+			cut.compare(new MappedIssue(issueOne, diff, ""), new MappedIssue(issueTwo, diff, "")),
 			equalTo(-1)
 		);
 	}
@@ -55,7 +64,7 @@ public class IssueSeveritySorterTest {
 
 		assertThat(
 			"The same severity should report that they are equal.",
-			cut.compare(new MappedIssue(issueOne, ""), new MappedIssue(issueTwo, "")),
+			cut.compare(new MappedIssue(issueOne, diff, ""), new MappedIssue(issueTwo, diff, "")),
 			equalTo(1)
 		);
 	}

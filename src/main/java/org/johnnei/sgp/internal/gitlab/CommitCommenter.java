@@ -4,6 +4,8 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.models.CommitComment;
@@ -34,16 +36,20 @@ public class CommitCommenter {
 	 * @param report The report to comment into GitLab.
 	 */
 	public void process(SonarReport report) {
-		List<CommitComment> existingComments;
-
-		try {
-			existingComments = gitlabApi.getCommitComments(report.getProject().getId(), report.getCommitSha());
-		} catch (IOException e) {
-			throw new IllegalStateException("Failed to fetch existing comments.", e);
-		}
+		List<CommitComment> existingComments = report.getCommitShas()
+			.flatMap(commit -> fetchCommitComments(report, commit).stream())
+			.collect(Collectors.toList());
 
 		commentIssuesInline(existingComments, report);
 		commentSummary(existingComments, report);
+	}
+
+	private List<CommitComment> fetchCommitComments(SonarReport report, String commit) {
+		try {
+			return gitlabApi.getCommitComments(report.getProject().getId(), commit);
+		} catch (IOException e) {
+			throw new IllegalStateException(String.format("Failed to fetch existing comments for commit %s.", commit), e);
+		}
 	}
 
 	/**
@@ -61,7 +67,7 @@ public class CommitCommenter {
 
 		if (!hasExistingSummary) {
 			try {
-				gitlabApi.createCommitComment(report.getProject().getId(), report.getCommitSha(), summary, null, null, null);
+				gitlabApi.createCommitComment(report.getProject().getId(), report.getBuildCommitSha(), summary, null, null, null);
 			} catch (IOException e) {
 				throw new ProcessException("Failed to post summary comment.", e);
 			}
@@ -124,10 +130,18 @@ public class CommitCommenter {
 	 * @return <code>true</code> when a comment with the same text on the same line has been found.
 	 */
 	private static boolean isExisting(MappedIssue issue, List<CommitComment> existingComments) {
+		LOGGER.debug(
+			"isExisting(issue[path={}, line={}, message={}], existingComments.size={})",
+			issue.getPath(),
+			issue.getIssue().line(),
+			issue.getIssue().message(),
+			existingComments.size()
+		);
 		return existingComments.stream()
-			.filter(comment -> comment.getPath().equals(issue.getPath()))
-			.filter(comment -> comment.getLine().equals(Integer.toString(issue.getIssue().line())))
-			.anyMatch(comment -> comment.getNote().equals(issue.getIssue().message()));
+			.filter(comment -> comment.getPath() != null)
+			.filter(comment -> Objects.equals(comment.getPath(), issue.getPath()))
+			.filter(comment -> Objects.equals(comment.getLine(), Integer.toString(issue.getIssue().line())))
+			.anyMatch(comment -> comment.getNote().endsWith(issue.getIssue().message()));
 	}
 
 	/**
@@ -138,13 +152,18 @@ public class CommitCommenter {
 	 * @return <code>true</code> when the comment was successfully created. Otherwise <code>false</code>.
 	 */
 	private boolean postComment(SonarReport report, MappedIssue mappedIssue) {
+
+		MarkdownBuilder messageBuilder = new MarkdownBuilder();
+		messageBuilder.addSeverityIcon(mappedIssue.getIssue().severity());
+		messageBuilder.addText(mappedIssue.getIssue().message());
+
 		try {
 			gitlabApi.createCommitComment(
 				report.getProject().getId(),
-				report.getCommitSha(),
-				mappedIssue.getIssue().message(),
+				mappedIssue.getCommitSha(),
+				messageBuilder.toString(),
 				mappedIssue.getPath(),
-				Integer.toString(mappedIssue.getIssue().line()),
+				formatLineNumber(mappedIssue),
 				"new"
 			);
 			return true;
@@ -152,5 +171,22 @@ public class CommitCommenter {
 			LOGGER.warn("Failed to create comment for in {}:{}.", mappedIssue.getPath(), mappedIssue.getIssue().line(), e);
 			return false;
 		}
+	}
+
+	private String formatLineNumber(MappedIssue mappedIssue) {
+		int line;
+
+		if (mappedIssue.getIssue().line() == null) {
+			line = mappedIssue.getDiff()
+				.getRanges()
+				.stream()
+				.findAny()
+				.orElseThrow(() -> new IllegalStateException(String.format("Diff without ranges for file: %s", mappedIssue.getPath())))
+				.getStart();
+		} else {
+			line = mappedIssue.getIssue().line();
+		}
+
+		return Integer.toString(line);
 	}
 }

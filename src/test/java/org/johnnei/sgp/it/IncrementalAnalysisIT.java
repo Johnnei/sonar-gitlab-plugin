@@ -2,11 +2,9 @@ package org.johnnei.sgp.it;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import org.gitlab.api.models.CommitComment;
+import org.hamcrest.collection.IsCollectionWithSize;
 import org.hamcrest.collection.IsEmptyCollection;
 import org.hamcrest.core.IsCollectionContaining;
 import org.junit.Test;
@@ -26,66 +24,51 @@ public class IncrementalAnalysisIT extends IntegrationTest {
 	 */
 	@Test
 	public void testDoubleAnalysis() throws Exception {
-		String commitHash = gitCommitAll();
-		sonarAnalysis(commitHash);
-		sonarAnalysis(commitHash);
+		prepareFeatureBranch();
+		String commitHash = accessGit().commitAll();
+		accessSonarQube().runAnalysis(commitHash);
+		accessSonarQube().runAnalysis(commitHash);
 
-		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commitHash);
-		List<String> comments = commitComments.stream()
-			.filter(comment -> comment.getLine() != null)
-			.map(CommitComment::getNote)
-			.collect(Collectors.toList());
-
+		List<String> comments = accessGitlab().getCommitComments(commitHash);
+		List<String> summary = accessGitlab().getCommitSummary(commitHash);
 		List<String> messages = Files.readAllLines(getTestResource("sonarqube/issues.txt"));
 
 		for (String message : messages) {
 			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
-			remoteMatchedComment(comments, message);
+			removeMatchedComment(comments, message);
 		}
 
-		assertThat(
-			String.format("%s Issues have been reported and thus comments should be there.", messages.size()),
-			comments,
-			IsEmptyCollection.empty()
-		);
-
-		assertThat(
-			"Only 1 summary comment should be created.",
-			commitComments.stream().filter(comment -> comment.getLine() == null).count(),
-			equalTo(1L)
-		);
+		assertThat(String.format("%s Issues have been reported and thus comments should be there.", messages.size()), comments, IsEmptyCollection.empty());
+		assertThat("Only 1 summary comment should be created.", summary, IsCollectionWithSize.hasSize(1));
 	}
 
 	@Test
 	public void testIncrementalAnalysis() throws Exception {
-		gitAdd("src/main/java/org/johnnei/sgp/it/api/sources/Main.java");
-		gitAdd("pom.xml");
-		String commitHash = gitCommit("Initial commit.");
-		String secondCommitHash = gitCommitAll();
+		prepareFeatureBranch();
+		accessGit().add("src/main/java/org/johnnei/sgp/it/api/sources/Main.java");
+		accessGit().add("pom.xml");
+		String commitHash = accessGit().commit("Initial commit.");
+		String secondCommitHash = accessGit().commitAll();
 
-		gitCheckout(commitHash);
-		sonarAnalysis(commitHash);
+		accessGit().checkout(commitHash);
+		accessSonarQube().runAnalysis(commitHash);
 
-		gitCheckout(secondCommitHash);
-		sonarAnalysis(secondCommitHash);
+		accessGit().checkout(secondCommitHash);
+		accessSonarQube().runAnalysis(secondCommitHash);
 
 		assertComments(commitHash, "sonarqube/incremental-1.txt");
 		assertComments(secondCommitHash, "sonarqube/incremental-2.txt");
 	}
 
 	private void assertComments(String commitHash, String issueFile) throws IOException {
-		List<CommitComment> commitComments = gitlabApi.getCommitComments(project.getId(), commitHash);
-		int commentCount = commitComments.size();
-		List<String> comments = commitComments.stream()
-			.filter(comment -> comment.getLine() != null)
-			.map(CommitComment::getNote)
-			.collect(Collectors.toList());
+		int commentCount = accessGitlab().getAllCommitComments(commitHash).size();
+		List<String> comments = accessGitlab().getCommitComments(commitHash);
 
 		List<String> messages = Files.readAllLines(getTestResource(issueFile));
 
 		for (String message : messages) {
 			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
-			remoteMatchedComment(comments, message);
+			removeMatchedComment(comments, message);
 		}
 
 		assertThat(

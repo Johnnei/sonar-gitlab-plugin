@@ -5,12 +5,9 @@ import javax.annotation.Nonnull;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
-/**
- * Created by Johnnei on 2016-12-20.
- */
 public class Stopwatch {
 
-	private Logger LOGGER = Loggers.get(Stopwatch.class);
+	private static final Logger LOGGER = Loggers.get(Stopwatch.class);
 
 	private long startTime;
 

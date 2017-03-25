@@ -1,1 +1,1 @@
-Change this condition so that it does not always evaluate to "true"
+:negative_squared_cross_mark: Change this condition so that it does not always evaluate to "true"
