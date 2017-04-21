@@ -115,9 +115,7 @@ public class CommitCommenter {
 	private void commentIssuesInline(List<CommitComment> existingComments, SonarReport report) {
 		boolean allCommentsSucceeded = report.getIssues()
 			.filter(issue -> !isExisting(issue, existingComments))
-			.map(mappedIssue -> postComment(report, mappedIssue))
-			// All match true
-			.allMatch(result -> result);
+			.allMatch(mappedIssue -> postComment(report, mappedIssue));
 
 		if (!allCommentsSucceeded) {
 			throw new ProcessException("One or more comments failed to be added to the commit.");
@@ -140,7 +138,7 @@ public class CommitCommenter {
 		return existingComments.stream()
 			.filter(comment -> comment.getPath() != null)
 			.filter(comment -> Objects.equals(comment.getPath(), issue.getPath()))
-			.filter(comment -> Objects.equals(comment.getLine(), Integer.toString(issue.getIssue().line())))
+			.filter(comment -> Objects.equals(comment.getLine(), formatLineNumber(issue)))
 			.anyMatch(comment -> comment.getNote().endsWith(issue.getIssue().message()));
 	}
 
@@ -173,7 +171,7 @@ public class CommitCommenter {
 		}
 	}
 
-	private String formatLineNumber(MappedIssue mappedIssue) {
+	private static String formatLineNumber(MappedIssue mappedIssue) {
 		int line;
 
 		if (mappedIssue.getIssue().line() == null) {
@@ -181,7 +179,10 @@ public class CommitCommenter {
 				.getRanges()
 				.stream()
 				.findAny()
-				.orElseThrow(() -> new IllegalStateException(String.format("Diff without ranges for file: %s", mappedIssue.getPath())))
+				.orElseThrow(() -> new IllegalStateException(String.format(
+					"New File Level issue but there is no diff range in file: %s",
+					mappedIssue.getPath()
+				)))
 				.getStart();
 		} else {
 			line = mappedIssue.getIssue().line();
