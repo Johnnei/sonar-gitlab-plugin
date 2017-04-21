@@ -21,6 +21,7 @@ public class MockIssue {
 		when(issueMock.inputComponent()).thenReturn(inputComponentMock);
 		when(issueMock.line()).thenReturn(null);
 		when(issueMock.message()).thenReturn("File level violation.");
+		when(issueMock.severity()).thenReturn(Severity.MAJOR);
 
 		return issueMock;
 	}
