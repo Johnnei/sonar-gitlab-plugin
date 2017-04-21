@@ -25,6 +25,8 @@ quicktests:
       expire_in: 1 week
       paths:
       - "target/jacoco.exec"
+      - "target/surefire-reports/*.txt"
+      - "target/surefire-reports/*.xml"
 
 sonarqube:
     stage: qa
