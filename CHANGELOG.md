@@ -1,5 +1,12 @@
 # Unreleased
 
+# 0.2.1 (2017-04-27)
+No changes since last rc.
+
+# 0.2.1-rc.1 (2017-04-22)
+## Bug Fixes
+- [SGP-45](https://jira.johnnei.org/browse/SGP-35): Handle existing file level issues correctly.
+
 # 0.2.0 (2017-03-25)
 No changes since last rc.
 

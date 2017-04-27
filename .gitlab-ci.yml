@@ -25,6 +25,8 @@ quicktests:
       expire_in: 1 week
       paths:
       - "target/jacoco.exec"
+      - "target/surefire-reports/*.txt"
+      - "target/surefire-reports/*.xml"
 
 sonarqube:
     stage: qa
@@ -69,6 +71,12 @@ integration-image:
       - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
 
 # Test compatibility with SonarQube Versions
+SQ-6.3-GL-8.15:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "6.3"
+      GITLAB_VERSION: "8.15.2-ce.0"
+
 SQ-6.2-GL-8.15:
     <<: *it_template
     variables:

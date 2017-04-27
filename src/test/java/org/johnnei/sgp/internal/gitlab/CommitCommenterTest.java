@@ -1,5 +1,6 @@
 package org.johnnei.sgp.internal.gitlab;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -190,7 +191,73 @@ public class CommitCommenterTest {
 	}
 
 	@Test
-	public void testProcessExcludeExistingComments() throws Exception {
+	public void testProcessMissingDiffForFileLevelIssue() throws Exception {
+		thrown.expect(IllegalStateException.class);
+		thrown.expectMessage("diff");
+
+		GitlabAPI apiMock = mock(GitlabAPI.class);
+		GitlabProject projectMock = mock(GitlabProject.class);
+		SonarReport reportMock = mock(SonarReport.class);
+
+		when(apiMock.getCommitComments(projectId, hash)).thenReturn(Collections.emptyList());
+
+		when(projectMock.getId()).thenReturn(projectId);
+		when(diff.getRanges()).thenReturn(Collections.emptyList());
+
+		PostJobIssue fileIssueMock = MockIssue.mockFileIssue(new File(path));
+
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(fileIssueMock, diff, path)));
+		when(reportMock.getBuildCommitSha()).thenReturn(hash);
+		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
+		when(reportMock.getProject()).thenReturn(projectMock);
+
+		CommitCommenter cut = new CommitCommenter(apiMock);
+
+		cut.process(reportMock);
+	}
+
+	@Test
+	public void testProcessExcludeExistingWithFileComments() throws Exception {
+		String summary = "SonarQube analysis reported 0 issues.\n\nWatch the comments in this conversation to review them.";
+
+		GitlabAPI apiMock = mock(GitlabAPI.class);
+		GitlabProject projectMock = mock(GitlabProject.class);
+		SonarReport reportMock = mock(SonarReport.class);
+
+		CommitComment commentMock = mock(CommitComment.class);
+		when(commentMock.getLine()).thenReturn(Integer.toString(line));
+		when(commentMock.getPath()).thenReturn(path);
+		when(commentMock.getNote()).thenReturn(":bangbang: File level violation.");
+
+		CommitComment summaryMock = mock(CommitComment.class);
+		when(summaryMock.getPath()).thenReturn(null);
+		when(summaryMock.getLine()).thenReturn(null);
+		when(summaryMock.getNote()).thenReturn(summary);
+
+		when(apiMock.getCommitComments(projectId, hash)).thenReturn(Arrays.asList(commentMock, summaryMock));
+
+		when(projectMock.getId()).thenReturn(projectId);
+		HunkRange rangeMock = mock(HunkRange.class);
+		when(rangeMock.getStart()).thenReturn(line);
+		when(diff.getRanges()).thenReturn(Collections.singletonList(rangeMock));
+
+		PostJobIssue fileIssueMock = MockIssue.mockFileIssue(new File(path));
+
+		when(reportMock.getIssues()).thenReturn(Stream.of(new MappedIssue(fileIssueMock, diff, path)));
+		when(reportMock.getBuildCommitSha()).thenReturn(hash);
+		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
+		when(reportMock.getProject()).thenReturn(projectMock);
+
+		CommitCommenter cut = new CommitCommenter(apiMock);
+
+		cut.process(reportMock);
+
+		verify(apiMock).getCommitComments(projectId, hash);
+		verifyNoMoreInteractions(apiMock);
+	}
+
+	@Test
+	public void testProcessExistingFileLevelIssue() throws Exception {
 		String summary = "SonarQube analysis reported 0 issues.\n\nWatch the comments in this conversation to review them.";
 
 		GitlabAPI apiMock = mock(GitlabAPI.class);
