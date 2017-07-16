@@ -1,0 +1,6 @@
+:grey_exclamation: Remove this unused "inputStream" local variable.
+:exclamation: Remove this useless assignment to local variable "inputStream".
+:negative_squared_cross_mark: Close this "FileInputStream".
+:information_source: Do not forget to remove this deprecated code someday.
+:grey_exclamation: Replace this "switch" statement by "if" statements to increase readability.
+:bangbang: Add a default case to this switch.
