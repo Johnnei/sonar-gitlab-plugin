@@ -30,7 +30,7 @@ quicktests:
 
 sonarqube:
     stage: qa
-    script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://sonarqube.johnnei.org -Dsonar.analysis.mode=issues -Dsonar.gitlab.analyse.commit=$CI_BUILD_REF -Dsonar.login=$INHOUSE_SONAR_TOKEN"
+    script: "mvn -B compile test-compile sonar:sonar -Dsonar.host.url=https://sonarqube.johnnei.org -Dsonar.analysis.mode=issues -Dsonar.gitlab.analyse.commit=$CI_COMMIT_SHA -Dsonar.login=$INHOUSE_SONAR_TOKEN"
     only: ["/^feature\\/.*$/"]
     dependencies: ["quicktests"]
 
@@ -71,45 +71,51 @@ integration-image:
       - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
 
 # Test compatibility with SonarQube Versions
-SQ-6.3-GL-8.15:
+SQ-6.4-GL-9.1:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "6.4"
+      GITLAB_VERSION: "9.1.4-ce.0"
+
+SQ-6.3-GL-9.1:
     <<: *it_template
     variables:
       SONAR_VERSION: "6.3"
-      GITLAB_VERSION: "8.15.2-ce.0"
+      GITLAB_VERSION: "9.1.4-ce.0"
 
-SQ-6.2-GL-8.15:
+SQ-6.2-GL-9.1:
     <<: *it_template
     variables:
       SONAR_VERSION: "6.2"
-      GITLAB_VERSION: "8.15.2-ce.0"
+      GITLAB_VERSION: "9.1.4-ce.0"
 
-SQ-6.1-GL-8.15:
+SQ-6.1-GL-9.1:
     <<: *it_template
     variables:
       SONAR_VERSION: "6.1"
-      GITLAB_VERSION: "8.15.2-ce.0"
+      GITLAB_VERSION: "9.1.4-ce.0"
 
-SQ-6.0-GL-8.15:
+SQ-6.0-GL-9.1:
     <<: *it_template
     variables:
       SONAR_VERSION: "6.0"
-      GITLAB_VERSION: "8.15.2-ce.0"
+      GITLAB_VERSION: "9.1.4-ce.0"
 
 # Test compatibility with GitLab versions
-SQ-LTS-GL-8.17:
+SQ-LTS-GL-9.1:
     <<: *it_template
     variables:
       SONAR_VERSION: "lts"
-      GITLAB_VERSION: "8.17.0-ce.0"
+      GITLAB_VERSION: "9.1.4-ce.0"
 
-SQ-LTS-GL-8.16:
+SQ-LTS-GL-9.2:
     <<: *it_template
     variables:
       SONAR_VERSION: "lts"
-      GITLAB_VERSION: "8.16.0-ce.0"
+      GITLAB_VERSION: "9.2.7-ce.0"
 
-SQ-LTS-GL-8.15:
+SQ-LTS-GL-9.3:
     <<: *it_template
     variables:
       SONAR_VERSION: "lts"
-      GITLAB_VERSION: "8.15.2-ce.0"
+      GITLAB_VERSION: "9.3.6-ce.0"

@@ -8,13 +8,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.hamcrest.collection.IsCollectionWithSize;
-import org.hamcrest.collection.IsEmptyCollection;
-import org.hamcrest.core.IsCollectionContaining;
 import org.junit.Test;
 
 import org.johnnei.sgp.it.framework.IntegrationTest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsEmptyCollection.empty;
+import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.hamcrest.core.IsEqual.equalTo;
 
 public class CommentOnCommitIT extends IntegrationTest {
@@ -30,15 +30,11 @@ public class CommentOnCommitIT extends IntegrationTest {
 		List<String> messages = Files.readAllLines(getTestResource("sonarqube/issues.txt"));
 
 		for (String message : messages) {
-			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
+			assertThat(comments, hasItem(equalTo(message)));
 			removeMatchedComment(comments, message);
 		}
 
-		assertThat(
-			String.format("%s Issues have been reported and thus comments should be there.", messages.size()),
-			comments,
-			IsEmptyCollection.empty()
-		);
+		assertThat(String.format("%s Issues have been reported and thus comments should be there.", messages.size()), comments, empty());
 	}
 
 	@Test
@@ -60,15 +56,11 @@ public class CommentOnCommitIT extends IntegrationTest {
 		List<String> messages = Files.readAllLines(getTestResource("sonarqube/issues.txt"));
 
 		for (String message : messages) {
-			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
+			assertThat(comments, hasItem(equalTo(message)));
 			removeMatchedComment(comments, message);
 		}
 
-		assertThat(
-			String.format("%s Issues have been reported and thus comments should be there.", messages.size()),
-			comments,
-			IsEmptyCollection.empty()
-		);
+		assertThat(String.format("%s Issues have been reported and thus comments should be there.", messages.size()), comments, empty());
 	}
 
 	@Test
@@ -125,14 +117,10 @@ public class CommentOnCommitIT extends IntegrationTest {
 		List<String> messages = Files.readAllLines(getTestResource("sonarqube/issues.txt"));
 
 		for (String message : messages) {
-			assertThat(comments, IsCollectionContaining.hasItem(equalTo(message)));
+			assertThat(comments, hasItem(equalTo(message)));
 			removeMatchedComment(comments, message);
 		}
 
-		assertThat(
-			String.format("%s Issues have been reported and thus comments should be there.", messages.size()),
-			comments,
-			IsEmptyCollection.empty()
-		);
+		assertThat(String.format("%s Issues have been reported and thus comments should be there.", messages.size()), comments, empty());
 	}
 }
