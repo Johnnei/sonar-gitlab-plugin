@@ -2,12 +2,12 @@ package org.johnnei.sgp.internal.model;
 
 import java.util.Arrays;
 
-import org.gitlab.api.models.GitlabProject;
 import org.junit.Before;
 import org.junit.Test;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.batch.rule.Severity;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabProject;
 import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -34,7 +34,7 @@ public class SonarReportTest {
 
 		cut = new SonarReport.Builder()
 			.setBuildCommitSha("a2b4")
-			.setProject(mock(GitlabProject.class))
+			.setProject(mock(GitLabProject.class))
 			.setIssues(Arrays.asList(new MappedIssue(criticalIssueMock, diff, ""), new MappedIssue(minorIssueMock, diff2, "")))
 			.build();
 	}
@@ -73,7 +73,7 @@ public class SonarReportTest {
 
 		cut = new SonarReport.Builder()
 			.setBuildCommitSha("a2b4")
-			.setProject(mock(GitlabProject.class))
+			.setProject(mock(GitLabProject.class))
 			.setIssues(Arrays.asList(
 				new MappedIssue(criticalIssueMock, diff, ""),
 				new MappedIssue(minorIssueMock, diff, ""),

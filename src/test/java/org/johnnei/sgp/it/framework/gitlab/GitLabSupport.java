@@ -1,5 +1,6 @@
 package org.johnnei.sgp.it.framework.gitlab;
 
+import javax.ws.rs.client.ClientRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -15,16 +16,21 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.models.CommitComment;
-import org.gitlab.api.models.GitlabAccessLevel;
-import org.gitlab.api.models.GitlabCommitStatus;
-import org.gitlab.api.models.GitlabProject;
-import org.gitlab.api.models.GitlabSession;
-import org.gitlab.api.models.GitlabUser;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.johnnei.sgp.internal.gitlab.api.JacksonConfigurator;
+import org.johnnei.sgp.internal.gitlab.api.v4.AuthFilter;
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.CommitComment;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabAccessLevel;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabProject;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabSession;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabUser;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitlabCommitStatus;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -50,11 +56,11 @@ public class GitLabSupport {
 
 	private final String url;
 
-	private GitlabAPI rootUser;
+	private GitLabApi rootUser;
 
-	private GitlabAPI sonarUser;
+	private GitLabApi sonarUser;
 
-	private GitlabProject project;
+	private GitLabProject project;
 
 	private String sonarUserToken;
 
@@ -110,39 +116,40 @@ public class GitLabSupport {
 		}
 	}
 
+	private GitLabApi createApi(String username, String password) {
+		GitLabApi api = createApi(null);
+		GitLabSession session = api.createSession(username, password);
+		return createApi(session.getPrivateToken());
+	}
+
+	private GitLabApi createApi(String token) {
+		ResteasyWebTarget client = new ResteasyClientBuilder().build()
+			.target(url)
+			.register(JacksonConfigurator.class)
+			.register((ClientRequestFilter) requestContext -> LOGGER.debug("Request: {}", requestContext.getUri()));
+
+		if (token != null) {
+			client = client.register(new AuthFilter(token));
+		}
+
+		return client.proxy(GitLabApi.class);
+	}
+
 	public void ensureItUserCreated() throws IOException {
 		if (rootUser == null) {
-			GitlabSession session = GitlabAPI.connect(url, "root", ADMIN_PASSWORD);
-			rootUser = GitlabAPI.connect(url, session.getPrivateToken());
-
+			rootUser = createApi("root", ADMIN_PASSWORD);
 			LOGGER.info("Logged in as root to create integration user.");
 		}
 
 		if (rootUser.getUsers().stream().noneMatch(user -> INTEGRATION_USER.equals(user.getUsername()))) {
-			rootUser.createUser(
-				"it@localhost.nl",
-				ADMIN_PASSWORD,
-				INTEGRATION_USER,
-				"SonarQube Bot",
-				null,
-				null,
-				null,
-				null,
-				null,
-				null,
-				null,
-				null,
-				false,
-				false,
-				true
-			);
+			rootUser.createUser("it@localhost.nl", ADMIN_PASSWORD, INTEGRATION_USER, "SonarQube Bot", true);
 			LOGGER.info("GitLab integration user created.");
 		}
 
 		if (sonarUserToken == null) {
-			GitlabSession session = GitlabAPI.connect(url, INTEGRATION_USER, ADMIN_PASSWORD);
+			GitLabSession session = createApi(null).createSession(INTEGRATION_USER, ADMIN_PASSWORD);
 			sonarUserToken = session.getPrivateToken();
-			sonarUser = GitlabAPI.connect(url, sonarUserToken);
+			sonarUser = createApi(sonarUserToken);
 			LOGGER.info("Logged in as {}.", INTEGRATION_USER);
 		} else {
 			LOGGER.info("Re-using existing GitLab session.");
@@ -150,25 +157,9 @@ public class GitLabSupport {
 	}
 
 	public void ensureProjectLimitRaised() throws IOException {
-		GitlabUser user = rootUser.getUser();
+		GitLabUser user = rootUser.getUser();
 		if (user.getProjectsLimit() < 1000) {
-			user = rootUser.updateUser(
-				user.getId(),
-				user.getEmail(),
-				null,
-				null,
-				null,
-				null,
-				null,
-				null,
-				null,
-				1000,
-				null,
-				null,
-				null,
-				null,
-				null
-			);
+			user = rootUser.updateUser(user.getId(), user.getEmail(), 1000);
 			assertThat("Project limit should be raised in order to be able to run all tests.", user.getProjectsLimit(), equalTo(1000));
 		}
 	}
@@ -179,7 +170,7 @@ public class GitLabSupport {
 		String projectName = String.format("sgp-it-%s-%s", clazz.getSimpleName(), testName.getMethodName());
 
 		List<String> projects = rootUser.getProjects().stream()
-			.map(GitlabProject::getName)
+			.map(GitLabProject::getName)
 			.collect(Collectors.toList());
 		assertThat("Project with that name already exists. Duplicate test name.", projects, not(hasItem(equalTo(projectName))));
 
@@ -187,7 +178,7 @@ public class GitLabSupport {
 		project = rootUser.createProject(projectName);
 		assertNotNull("Failed to create project in GitLab", project);
 
-		rootUser.addProjectMember(project.getId(), sonarUser.getUser().getId(), GitlabAccessLevel.Developer);
+		rootUser.addProjectMember(project.getId(), sonarUser.getUser().getId(), GitLabAccessLevel.DEVELOPER.getLevel());
 		LOGGER.info("Added {} as developer on project.", INTEGRATION_USER);
 	}
 	public List<String> getAllCommitComments(String commitHash) throws IOException {
@@ -211,7 +202,7 @@ public class GitLabSupport {
 	}
 
 	public GitlabCommitStatus getCommitStatus(String commit) throws IOException {
-		return sonarUser.getCommitStatuses(project, commit).stream().filter(status -> "SonarQube".equals(status.getName())).findAny().orElse(null);
+		return sonarUser.getCommitStatuses(project.getId(), commit).stream().filter(status -> "SonarQube".equals(status.getName())).findAny().orElse(null);
 	}
 
 	private static boolean filterIssues(CommitComment comment) {

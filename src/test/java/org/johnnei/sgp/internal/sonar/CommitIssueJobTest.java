@@ -6,9 +6,6 @@ import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.models.GitlabCommitDiff;
-import org.gitlab.api.models.GitlabProject;
 import org.hamcrest.collection.IsEmptyCollection;
 import org.junit.Before;
 import org.junit.Rule;
@@ -29,6 +26,9 @@ import org.sonar.api.utils.log.LogTester;
 import org.johnnei.sgp.internal.gitlab.CommitCommenter;
 import org.johnnei.sgp.internal.gitlab.DiffFetcher;
 import org.johnnei.sgp.internal.gitlab.PipelineBreaker;
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabCommitDiff;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabProject;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 import org.johnnei.sgp.internal.model.diff.HunkRange;
@@ -64,7 +64,7 @@ public class CommitIssueJobTest {
 	private GitLabPluginConfiguration configurationMock;
 
 	@Mock
-	private GitlabAPI gitlabApiMock;
+	private GitLabApi gitlabApiMock;
 
 	@Mock
 	private DiffFetcher diffFetcherMock;
@@ -111,7 +111,7 @@ public class CommitIssueJobTest {
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 
 		PostJobIssue issueMock = MockIssue.mockInlineIssue(file, 3, Severity.CRITICAL, "Steeeevvveee!");
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		when(projectMock.getId()).thenReturn(projectId);
 
 		String diff = "--- a/src/Main.java\n" +
@@ -122,7 +122,7 @@ public class CommitIssueJobTest {
 			" \n" +
 			" import java.io.IOException;\n" +
 			" import java.nio.file.Files;";
-		GitlabCommitDiff commitDiffOne = mock(GitlabCommitDiff.class);
+		GitLabCommitDiff commitDiffOne = mock(GitLabCommitDiff.class);
 		when(commitDiffOne.getDiff()).thenReturn(diff);
 		when(commitDiffOne.getNewPath()).thenReturn("src/Main.java");
 
@@ -153,7 +153,7 @@ public class CommitIssueJobTest {
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 
 		PostJobIssue issueMock = MockIssue.mockInlineIssue(file, 3, Severity.CRITICAL, "Steeeevvveee!");
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		when(projectMock.getId()).thenReturn(projectId);
 
 		UnifiedDiff diffMock = mock(UnifiedDiff.class);
@@ -190,7 +190,7 @@ public class CommitIssueJobTest {
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 
 		PostJobIssue issueMock = MockIssue.mockInlineIssue(file, 12, Severity.CRITICAL, "Steeeevvveee!");
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		when(projectMock.getId()).thenReturn(projectId);
 
 		UnifiedDiff unifiedDiffMock = mock(UnifiedDiff.class);
@@ -239,7 +239,7 @@ public class CommitIssueJobTest {
 		int projectId = 42;
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		when(projectMock.getId()).thenReturn(projectId);
 
 		// Don't use utility method as that one will use platform dependant file separators.
@@ -284,7 +284,7 @@ public class CommitIssueJobTest {
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 
 		PostJobIssue issueMock = MockIssue.mockFileIssue(file);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		when(projectMock.getId()).thenReturn(projectId);
 
 		String diff = "--- a/src/main/java/org/johnnei/sgp/it/NoIssue.java\n" +
@@ -296,7 +296,7 @@ public class CommitIssueJobTest {
 			" import java.io.IOException;\n" +
 			" import java.nio.file.Files;";
 
-		GitlabCommitDiff commitDiffOne = mock(GitlabCommitDiff.class);
+		GitLabCommitDiff commitDiffOne = mock(GitLabCommitDiff.class);
 		when(commitDiffOne.getDiff()).thenReturn(diff);
 		when(commitDiffOne.getOldPath()).thenReturn("src/main/java/org/johnnei/sgp/it/NoIssue.java");
 		when(commitDiffOne.getNewPath()).thenReturn("src/main/java/org/johnnei/sgp/it/NoIssue.java");
@@ -336,11 +336,11 @@ public class CommitIssueJobTest {
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 
 		PostJobIssue issueMock = MockIssue.mockFileIssue(file);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		when(projectMock.getId()).thenReturn(projectId);
 
 		String diff = "--- a/src/main/java/org/johnnei/sgp/it/internal/NoIssue.java\n+++ b/src/main/java/org/johnnei/sgp/it/NoIssue.java\n";
-		GitlabCommitDiff commitDiffOne = mock(GitlabCommitDiff.class);
+		GitLabCommitDiff commitDiffOne = mock(GitLabCommitDiff.class);
 		when(commitDiffOne.getDiff()).thenReturn(diff);
 		when(commitDiffOne.getOldPath()).thenReturn("src/main/java/org/johnnei/sgp/it/internal/NoIssue.java");
 		when(commitDiffOne.getNewPath()).thenReturn("src/main/java/org/johnnei/sgp/it/NoIssue.java");
@@ -378,7 +378,7 @@ public class CommitIssueJobTest {
 		String hash = "a2b4";
 		PostJobContext postJobContextMock = mock(PostJobContext.class);
 
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 
 		when(postJobContextMock.issues()).thenReturn(Collections.singletonList(issueMock));
 		when(configurationMock.getCommitHash()).thenReturn(hash);

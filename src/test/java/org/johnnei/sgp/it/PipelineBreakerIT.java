@@ -2,10 +2,10 @@ package org.johnnei.sgp.it;
 
 import java.util.Map;
 
-import org.gitlab.api.models.GitlabCommitStatus;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitlabCommitStatus;
 import org.johnnei.sgp.it.framework.IntegrationTest;
 import org.johnnei.sgp.it.framework.sonarqube.SonarQubeSupport;
 import org.johnnei.sgp.sonar.GitLabPlugin;

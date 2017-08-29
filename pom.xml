@@ -30,7 +30,8 @@
 
     <!-- Dependency Versions -->
     <dependency.sonar-plugin-api.version>5.6</dependency.sonar-plugin-api.version>
-    <dependency.java-gitlab-api.version>1.2.7</dependency.java-gitlab-api.version>
+    <dependency.com.fasterxml.jackson.core.jackson.version>2.9.0</dependency.com.fasterxml.jackson.core.jackson.version>
+    <dependency.org.jboss.resteasy.version>3.1.4.Final</dependency.org.jboss.resteasy.version>
   </properties>
 
   <developers>
@@ -219,6 +220,17 @@
     </plugins>
   </build>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>1.2</version>
+        <scope>provided</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>org.sonarsource.sonarqube</groupId>
@@ -233,11 +245,38 @@
       <scope>provided</scope>
     </dependency>
 
-    <!-- Java Wrapper for the GitLab API -->
+    <!-- REST library to connect with GitLab -->
     <dependency>
-      <groupId>org.gitlab</groupId>
-      <artifactId>java-gitlab-api</artifactId>
-      <version>${dependency.java-gitlab-api.version}</version>
+      <groupId>org.jboss.resteasy</groupId>
+      <artifactId>resteasy-jaxrs</artifactId>
+      <version>${dependency.org.jboss.resteasy.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.resteasy</groupId>
+      <artifactId>resteasy-client</artifactId>
+      <version>${dependency.org.jboss.resteasy.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.resteasy</groupId>
+      <artifactId>resteasy-jackson2-provider</artifactId>
+      <version>${dependency.org.jboss.resteasy.version}</version>
+    </dependency>
+
+    <!-- JSON operations -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>${dependency.com.fasterxml.jackson.core.jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>${dependency.com.fasterxml.jackson.core.jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${dependency.com.fasterxml.jackson.core.jackson.version}</version>
     </dependency>
 
     <!-- unit tests -->

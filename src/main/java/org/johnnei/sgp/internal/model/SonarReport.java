@@ -5,9 +5,9 @@ import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import org.gitlab.api.models.GitlabProject;
 import org.sonar.api.batch.rule.Severity;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabProject;
 import org.johnnei.sgp.internal.sorting.IssueSeveritySorter;
 
 /**
@@ -19,7 +19,7 @@ public class SonarReport {
 	private final Collection<MappedIssue> issues;
 
 	@Nonnull
-	private final GitlabProject project;
+	private final GitLabProject project;
 
 	@Nonnull
 	private final String buildCommitSha;
@@ -50,7 +50,7 @@ public class SonarReport {
 	}
 
 	@Nonnull
-	public GitlabProject getProject() {
+	public GitLabProject getProject() {
 		return project;
 	}
 
@@ -69,7 +69,7 @@ public class SonarReport {
 	public static class Builder {
 
 		private String buildCommitSha;
-		private GitlabProject project;
+		private GitLabProject project;
 		private Collection<MappedIssue> issues;
 
 		public Builder setBuildCommitSha(String buildCommitSha) {
@@ -77,7 +77,7 @@ public class SonarReport {
 			return this;
 		}
 
-		public Builder setProject(GitlabProject project) {
+		public Builder setProject(GitLabProject project) {
 			this.project = project;
 			return this;
 		}

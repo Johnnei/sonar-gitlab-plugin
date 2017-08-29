@@ -1,18 +1,24 @@
 package org.johnnei.sgp.internal.sonar;
 
 import javax.annotation.CheckForNull;
+import javax.ws.rs.ext.RuntimeDelegate;
 import java.io.IOException;
 
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.GitlabAPIException;
-import org.gitlab.api.TokenType;
-import org.gitlab.api.models.GitlabProject;
+import org.jboss.resteasy.client.jaxrs.ProxyBuilder;
+import org.jboss.resteasy.client.jaxrs.ProxyConfig;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.sonar.api.batch.BatchSide;
 import org.sonar.api.batch.InstantiationStrategy;
 import org.sonar.api.config.Settings;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
+import org.johnnei.sgp.internal.gitlab.api.JacksonConfigurator;
+import org.johnnei.sgp.internal.gitlab.api.v4.AuthFilter;
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabProject;
 import org.johnnei.sgp.internal.util.Stopwatch;
 import org.johnnei.sgp.sonar.GitLabPlugin;
 
@@ -27,7 +33,7 @@ public class GitLabPluginConfiguration {
 
 	private final Settings settings;
 
-	private GitlabProject project;
+	private GitLabProject project;
 
 	public GitLabPluginConfiguration(Settings settings) {
 		this.settings = settings;
@@ -45,7 +51,7 @@ public class GitLabPluginConfiguration {
 		return settings.getString(GitLabPlugin.GITLAB_AUTH_TOKEN);
 	}
 
-	public GitlabAPI createGitLabConnection() {
+	public GitLabApi createGitLabConnection() {
 		String url = getGitLabUrl();
 		String token = getGitLabToken();
 		if (isBlank(url)) {
@@ -55,35 +61,19 @@ public class GitLabPluginConfiguration {
 			throw new IllegalArgumentException("GitLab user token hasn't been set.");
 		}
 
-		GitlabAPI api = createConnection(url, token, TokenType.ACCESS_TOKEN);
-		if (!attemptConnect(api, TokenType.ACCESS_TOKEN.name())) {
-			LOGGER.warn("Failed to authorize with GitLab Access Token. Falling back to less secure usage of private token.");
-			api = createConnection(url, token, TokenType.PRIVATE_TOKEN);
-			if (!attemptConnect(api, TokenType.PRIVATE_TOKEN.name())) {
-				throw new IllegalArgumentException("Failed to authorize user with API.");
-			}
-		}
-
-		return api;
+		return createConnection(url, token);
 	}
 
-	private boolean attemptConnect(GitlabAPI api, String tokenType) {
-		try {
-			api.getUser();
-		} catch (GitlabAPIException e) {
-			LOGGER.debug("Failed to authorize with {}.", tokenType, e);
-			if (e.getResponseCode() == 401) {
-				return false;
-			}
-		} catch (IOException e) {
-			throw new IllegalStateException("Failed to connect with GitLab.", e);
-		}
+	GitLabApi createConnection(String url, String token) {
+		RuntimeDelegate.setInstance(new ResteasyProviderFactory());
 
-		return true;
-	}
-
-	GitlabAPI createConnection(String url, String token, TokenType tokenType) {
-		return GitlabAPI.connect(url, token, tokenType);
+		ResteasyWebTarget target = new ResteasyClientBuilder()
+			.register(JacksonConfigurator.class)
+			.register(new AuthFilter(token))
+			.build()
+			.target(url);
+		ProxyConfig config = new ProxyConfig(this.getClass().getClassLoader(), null, null);
+		return ProxyBuilder.proxy(GitLabApi.class, target, config);
 	}
 
 	public void initialiseProject() throws IOException {
@@ -94,7 +84,7 @@ public class GitLabPluginConfiguration {
 
 		Stopwatch stopwatch = new Stopwatch();
 		stopwatch.start("Looking up GitLab project.");
-		GitlabAPI gitlabApi = createGitLabConnection();
+		GitLabApi gitlabApi = createGitLabConnection();
 		project = gitlabApi.getProjects().stream()
 			.filter(p -> {
 				String name = String.format("%s/%s", p.getNamespace().getName(), p.getName());
@@ -109,7 +99,7 @@ public class GitLabPluginConfiguration {
 		stopwatch.stop();
 	}
 
-	public GitlabProject getProject() {
+	public GitLabProject getProject() {
 		return project;
 	}
 

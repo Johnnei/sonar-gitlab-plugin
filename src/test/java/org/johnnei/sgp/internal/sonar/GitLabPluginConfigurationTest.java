@@ -1,13 +1,7 @@
 package org.johnnei.sgp.internal.sonar;
 
-import java.io.IOException;
 import java.util.Collections;
 
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.GitlabAPIException;
-import org.gitlab.api.TokenType;
-import org.gitlab.api.models.GitlabNamespace;
-import org.gitlab.api.models.GitlabProject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -15,12 +9,14 @@ import org.junit.rules.ExpectedException;
 import org.sonar.api.config.Settings;
 import org.sonar.api.utils.log.LogTester;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabNamespace;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabProject;
 import org.johnnei.sgp.sonar.GitLabPlugin;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.mockito.Mockito.mock;
@@ -37,15 +33,15 @@ public class GitLabPluginConfigurationTest {
 
 	private GitLabPluginConfiguration cut;
 
-	private GitlabAPI apiMock;
+	private GitLabApi apiMock;
 
 	private Settings settingsMock;
 
 	@Before
 	public void setUp() {
-		apiMock = mock(GitlabAPI.class);
+		apiMock = mock(GitLabApi.class);
 		settingsMock = mock(Settings.class);
-		cut = new GitLabPluginConfigurationMock(apiMock, settingsMock, false);
+		cut = new GitLabPluginConfigurationMock(apiMock, settingsMock);
 	}
 
 	@Test
@@ -96,85 +92,13 @@ public class GitLabPluginConfigurationTest {
 	}
 
 	@Test
-	public void testInitialiseFallBackToPrivateToken() throws Exception {
-		cut = new GitLabPluginConfigurationMock(apiMock, settingsMock, true);
-
-		when(settingsMock.getString("sonar.gitlab.analyse.project")).thenReturn("root/project");
-		when(settingsMock.getString("sonar.gitlab.uri")).thenReturn("http://localhost.localdomain/");
-		when(settingsMock.getString("sonar.gitlab.auth.token")).thenReturn("secure");
-
-		GitlabProject projectMock = mock(GitlabProject.class);
-		GitlabNamespace namespaceMock = mock(GitlabNamespace.class);
-		when(projectMock.getName()).thenReturn("project");
-		when(projectMock.getNamespace()).thenReturn(namespaceMock);
-		when(namespaceMock.getName()).thenReturn("root");
-
-		when(apiMock.getUser())
-			// This should cause the fallback to private token
-			.thenThrow(new GitlabAPIException("test", 401, new IOException("Test cause")))
-			.thenReturn(null);
-		when(apiMock.getProjects()).thenReturn(Collections.singletonList(projectMock));
-
-		cut.initialiseProject();
-
-		assertThat("Usage of private token should be discouraged.", logTester.logs(), hasItem(containsString("less secure")));
-	}
-
-	@Test
-	public void testInitialiseFailToConnect() throws Exception {
-		thrown.expect(IllegalStateException.class);
-		thrown.expectMessage("GitLab");
-
-		cut = new GitLabPluginConfigurationMock(apiMock, settingsMock, true);
-
-		when(settingsMock.getString("sonar.gitlab.analyse.project")).thenReturn("root/project");
-		when(settingsMock.getString("sonar.gitlab.uri")).thenReturn("http://localhost.localdomain/");
-		when(settingsMock.getString("sonar.gitlab.auth.token")).thenReturn("secure");
-
-		GitlabProject projectMock = mock(GitlabProject.class);
-		GitlabNamespace namespaceMock = mock(GitlabNamespace.class);
-		when(projectMock.getName()).thenReturn("project");
-		when(projectMock.getNamespace()).thenReturn(namespaceMock);
-		when(namespaceMock.getName()).thenReturn("root");
-
-		when(apiMock.getUser()).thenThrow(new IOException("test error path"));
-
-		cut.initialiseProject();
-	}
-
-	@Test
-	public void testInitialiseFailToAuthorize() throws Exception {
-		thrown.expect(IllegalArgumentException.class);
-		thrown.expectMessage("authorize");
-
-		cut = new GitLabPluginConfigurationMock(apiMock, settingsMock, true);
-
-		when(settingsMock.getString("sonar.gitlab.analyse.project")).thenReturn("root/project");
-		when(settingsMock.getString("sonar.gitlab.uri")).thenReturn("http://localhost.localdomain/");
-		when(settingsMock.getString("sonar.gitlab.auth.token")).thenReturn("secure");
-
-		GitlabProject projectMock = mock(GitlabProject.class);
-		GitlabNamespace namespaceMock = mock(GitlabNamespace.class);
-		when(projectMock.getName()).thenReturn("project");
-		when(projectMock.getNamespace()).thenReturn(namespaceMock);
-		when(namespaceMock.getName()).thenReturn("root");
-
-		when(apiMock.getUser())
-			// This should cause the fallback to private token
-			.thenThrow(new GitlabAPIException("test", 401, new IOException("Test cause")))
-			.thenThrow(new GitlabAPIException("test", 401, new IOException("Test cause")));
-
-		cut.initialiseProject();
-	}
-
-	@Test
 	public void testInitialise() throws Exception {
 		when(settingsMock.getString("sonar.gitlab.analyse.project")).thenReturn("root/project");
 		when(settingsMock.getString("sonar.gitlab.uri")).thenReturn("http://localhost.localdomain/");
 		when(settingsMock.getString("sonar.gitlab.auth.token")).thenReturn("secure");
 
-		GitlabProject projectMock = mock(GitlabProject.class);
-		GitlabNamespace namespaceMock = mock(GitlabNamespace.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
+		GitLabNamespace namespaceMock = mock(GitLabNamespace.class);
 		when(projectMock.getName()).thenReturn("project");
 		when(projectMock.getNamespace()).thenReturn(namespaceMock);
 		when(namespaceMock.getName()).thenReturn("root");
@@ -209,21 +133,15 @@ public class GitLabPluginConfigurationTest {
 
 	private static final class GitLabPluginConfigurationMock extends GitLabPluginConfiguration {
 
-		private GitlabAPI apiMock;
+		private GitLabApi apiMock;
 
-		private final boolean allowPrivateToken;
-
-		GitLabPluginConfigurationMock(GitlabAPI apiMock, Settings settings, boolean allowPrivateToken) {
+		GitLabPluginConfigurationMock(GitLabApi apiMock, Settings settings) {
 			super(settings);
 			this.apiMock = apiMock;
-			this.allowPrivateToken = allowPrivateToken;
 		}
 
 		@Override
-		GitlabAPI createConnection(String url, String token, TokenType tokenType) {
-			if (!allowPrivateToken) {
-				assertThat("Private token should not be used by default.", tokenType, not(equalTo(TokenType.PRIVATE_TOKEN)));
-			}
+		GitLabApi createConnection(String url, String token) {
 			return apiMock;
 		}
 
