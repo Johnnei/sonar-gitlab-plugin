@@ -1,27 +1,25 @@
 package org.johnnei.sgp.it.framework.sonarqube;
 
+import javax.ws.rs.client.ClientRequestFilter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.Credentials;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import org.sonar.api.utils.log.Logger;
-import org.sonar.api.utils.log.Loggers;
+import org.jboss.resteasy.client.jaxrs.BasicAuthentication;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.johnnei.sgp.internal.gitlab.api.JacksonConfigurator;
 import org.johnnei.sgp.it.framework.CommandLine;
 import org.johnnei.sgp.it.framework.gitlab.GitLabSupport;
 import org.johnnei.sgp.sonar.GitLabPlugin;
 
 public class SonarQubeSupport {
 
-	private static final ObjectMapper MAPPER = new ObjectMapper();
+	private static final Logger LOGGER = LoggerFactory.getLogger(SonarQubeSupport.class);
 
-	private static final Logger LOGGER = Loggers.get(SonarQubeSupport.class);
+	private static final String CUSTOM_QUALITY_PROFILE_NAME = "it-profile";
 
 	private final GitLabSupport gitlab;
 
@@ -29,16 +27,36 @@ public class SonarQubeSupport {
 
 	private final String host;
 
+	private final SonarQubeApi api;
+
+	private int customRulesActive = 0;
+
 	public SonarQubeSupport(GitLabSupport gitlab, CommandLine commandLine, String host) {
 		this.gitlab = gitlab;
 		this.commandLine = commandLine;
 		this.host = host;
+		this.api = new ResteasyClientBuilder()
+			.register(JacksonConfigurator.class)
+			.register(new BasicAuthentication("admin", "admin"))
+			.register((ClientRequestFilter) requestContext -> LOGGER.debug("Request: {}", requestContext.getUri()))
+			.build()
+			.target(host)
+			.proxy(SonarQubeApi.class);
 	}
 
 	public static Map<String, String> createDefaultSettings() {
 		Map<String, String> settings = new HashMap<>();
 		settings.put(GitLabPlugin.GITLAB_BREAK_PIPELINE, "true");
 		return settings;
+	}
+
+	public void ensureDefaultQualityProfile() throws IOException {
+		LOGGER.info("Ensuring that Sonar Way is the default Quality Profile.");
+		QualityProfile sonarWay = getSonarWayQualityProfile();
+		if (!sonarWay.isDefault()) {
+			api.setDefaultQualityProfile(sonarWay.getKey());
+		}
+
 	}
 
 	public void runAnalysis() throws IOException {
@@ -94,48 +112,46 @@ public class SonarQubeSupport {
 	}
 
 	public AutoCloseable enableRule(String ruleKey) throws IOException {
-		String profile = getQualityProfile();
+		QualityProfile profile = getCustomQualityProfile();
 
-		Request enableRequest = new Request.Builder()
-			.url(String.format(host + "/api/qualityprofiles/activate_rule?profile_key=%s&rule_key=%s", profile, ruleKey))
-			.header("Authorization", Credentials.basic("admin", "admin"))
-			.post(RequestBody.create(MediaType.parse("application/json"), ""))
-			.build();
+		if (customRulesActive == 0) {
+			LOGGER.debug("Setting custom Quality Profile as default profile.");
+			api.setDefaultQualityProfile(profile.getKey());
+		}
 
+		customRulesActive++;
+		api.activateRule(profile.getKey(), ruleKey);
+		LOGGER.debug("Enabled {} on {}", ruleKey, profile);
 
-		OkHttpClient client = new OkHttpClient();
-
-		String result = client.newCall(enableRequest).execute().body().string();
-
-		LOGGER.debug("Enabled {} on {}: {}", ruleKey, profile, result);
-
-		return () -> disableRule(client, profile, ruleKey);
+		return () -> disableRule(profile, ruleKey);
 	}
 
-	private void disableRule(OkHttpClient client, String profile, String ruleKey) throws IOException {
-		Request disableRequest = new Request.Builder()
-			.url(String.format(host + "/api/qualityprofiles/deactivate_rule?profile_key=%s&rule_key=%s", profile, ruleKey))
-			.header("Authorization", Credentials.basic("admin", "admin"))
-			.post(RequestBody.create(MediaType.parse("application/json"), ""))
-			.build();
+	private void disableRule(QualityProfile profile, String ruleKey) throws IOException {
+		api.deactivateRule(profile.getKey(), ruleKey);
+		LOGGER.debug("Disabled {} on {}", ruleKey, profile);
 
-		String result = client.newCall(disableRequest).execute().body().string();
-
-		LOGGER.debug("Disabled {} on {}: {}", ruleKey, profile, result);
+		customRulesActive--;
+		if (customRulesActive == 0) {
+			LOGGER.debug("Setting Sonar Way Quality Profile as default profile.");
+			api.setDefaultQualityProfile(getSonarWayQualityProfile().getKey());
+		}
 	}
 
-	private String getQualityProfile() throws IOException {
-		Request profileRequest = new Request.Builder()
-			.url(host + "/api/qualityprofiles/search?language=java")
-			.build();
-
-		OkHttpClient client = new OkHttpClient();
-
-		return MAPPER.readValue(client.newCall(profileRequest).execute().body().string(), SearchQualityProfiles.class)
+	private QualityProfile getCustomQualityProfile() throws IOException {
+		return api.searchQualityProfile("java")
 			.getProfiles()
 			.stream()
-			.map(QualityProfile::getKey)
+			.filter(profile -> CUSTOM_QUALITY_PROFILE_NAME.equalsIgnoreCase(profile.getName()))
 			.findFirst()
-			.orElseThrow(() -> new IllegalStateException("Failed to find Java Quality Profile."));
+			.orElseGet(() -> api.createQualityProfile("java", CUSTOM_QUALITY_PROFILE_NAME).getProfile());
+	}
+
+	private QualityProfile getSonarWayQualityProfile() throws IOException {
+		return api.searchQualityProfile("java")
+			.getProfiles()
+			.stream()
+			.filter(profile -> !CUSTOM_QUALITY_PROFILE_NAME.equalsIgnoreCase(profile.getName()))
+			.findFirst()
+			.orElseThrow(() -> new IllegalStateException("Sonar Way quality profile is missing."));
 	}
 }

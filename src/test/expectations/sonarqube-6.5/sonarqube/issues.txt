@@ -1,0 +1,7 @@
+:information_source: Do not forget to remove this deprecated code someday.
+:grey_exclamation: Replace this "switch" statement by "if" statements to increase readability.
+:exclamation: Change this condition so that it does not always evaluate to "true"
+:bangbang: Add a default case to this switch.
+:negative_squared_cross_mark: Use try-with-resources or close this "FileInputStream" in a "finally" clause.
+:grey_exclamation: Remove this unused "inputStream" local variable.
+:exclamation: Remove this useless assignment to local variable "inputStream".

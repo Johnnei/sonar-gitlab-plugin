@@ -71,51 +71,57 @@ integration-image:
       - "mvn -B verify -Dit.sonar.version=$SONAR_VERSION -Dit.gitlab.version=$GITLAB_VERSION"
 
 # Test compatibility with SonarQube Versions
-SQ-6.4-GL-9.1:
+SonarQube-6.5:
+    <<: *it_template
+    variables:
+      SONAR_VERSION: "6.5"
+      GITLAB_VERSION: "9.3.10-ce.0"
+
+SonarQube-6.4:
     <<: *it_template
     variables:
       SONAR_VERSION: "6.4"
-      GITLAB_VERSION: "9.1.4-ce.0"
+      GITLAB_VERSION: "9.3.10-ce.0"
 
-SQ-6.3-GL-9.1:
+SonarQube-6.3:
     <<: *it_template
     variables:
       SONAR_VERSION: "6.3"
-      GITLAB_VERSION: "9.1.4-ce.0"
+      GITLAB_VERSION: "9.3.10-ce.0"
 
-SQ-6.2-GL-9.1:
+SonarQube-6.2:
     <<: *it_template
     variables:
       SONAR_VERSION: "6.2"
-      GITLAB_VERSION: "9.1.4-ce.0"
+      GITLAB_VERSION: "9.3.10-ce.0"
 
-SQ-6.1-GL-9.1:
+SonarQube-6.1:
     <<: *it_template
     variables:
       SONAR_VERSION: "6.1"
-      GITLAB_VERSION: "9.1.4-ce.0"
+      GITLAB_VERSION: "9.3.10-ce.0"
 
-SQ-6.0-GL-9.1:
+SonarQube-6.0:
     <<: *it_template
     variables:
       SONAR_VERSION: "6.0"
-      GITLAB_VERSION: "9.1.4-ce.0"
+      GITLAB_VERSION: "9.3.10-ce.0"
 
 # Test compatibility with GitLab versions
-SQ-LTS-GL-9.1:
+GitLab-9.3:
     <<: *it_template
     variables:
       SONAR_VERSION: "lts"
-      GITLAB_VERSION: "9.1.4-ce.0"
+      GITLAB_VERSION: "9.3.10-ce.0"
 
-SQ-LTS-GL-9.2:
+GitLab-9.4:
     <<: *it_template
     variables:
       SONAR_VERSION: "lts"
-      GITLAB_VERSION: "9.2.7-ce.0"
+      GITLAB_VERSION: "9.4.5-ce.0"
 
-SQ-LTS-GL-9.3:
+GitLab-9.5:
     <<: *it_template
     variables:
       SONAR_VERSION: "lts"
-      GITLAB_VERSION: "9.3.6-ce.0"
+      GITLAB_VERSION: "9.5.2-ce.0"
