@@ -6,14 +6,14 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.models.GitlabCommit;
-import org.gitlab.api.models.GitlabCommitComparison;
 import org.sonar.api.batch.BatchSide;
 import org.sonar.api.batch.InstantiationStrategy;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabCommit;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabCommitComparison;
 import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
 import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
 
@@ -33,9 +33,9 @@ public class DiffFetcher {
 
 	@Nonnull
 	public Collection<UnifiedDiff> getDiffs() {
-		GitlabAPI gitlabAPI = configuration.createGitLabConnection();
+		GitLabApi gitlabAPI = configuration.createGitLabConnection();
 
-		GitlabCommitComparison compare;
+		GitLabCommitComparison compare;
 
 		try {
 			compare = gitlabAPI.compareCommits(configuration.getProject().getId(), configuration.getBaseBranch(), configuration.getCommitHash());
@@ -48,7 +48,7 @@ public class DiffFetcher {
 			.collect(Collectors.toList());
 	}
 
-	private Stream<UnifiedDiff> fetchCommitDiff(GitlabAPI gitlabAPI, GitlabCommit commit) {
+	private Stream<UnifiedDiff> fetchCommitDiff(GitLabApi gitlabAPI, GitLabCommit commit) {
 		try {
 			LOGGER.debug("Fetching Diff for {}", commit.getShortId());
 			return gitlabAPI.getCommitDiffs(configuration.getProject().getId(), commit.getShortId()).stream()

@@ -1,5 +1,11 @@
 # Unreleased
 
+## Compatibility Changes
+- [SGP-48](https://jira.johnnei.org/browse/SGP-48): Drop support for GitLab API v3
+
+## Improvements
+- [SGP-48](https://jira.johnnei.org/browse/SGP-48): Replace GitLab API wrapper with JAX-RS replacement for v4
+
 # 0.2.1 (2017-04-27)
 No changes since last rc.
 

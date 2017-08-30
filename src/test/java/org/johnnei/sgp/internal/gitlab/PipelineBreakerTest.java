@@ -3,8 +3,6 @@ package org.johnnei.sgp.internal.gitlab;
 import java.io.IOException;
 import java.util.stream.Stream;
 
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.models.GitlabProject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -16,12 +14,14 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.batch.rule.Severity;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabProject;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
 
 import static org.hamcrest.CoreMatchers.isA;
-import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -37,19 +37,20 @@ public class PipelineBreakerTest {
 	@Mock
 	private GitLabPluginConfiguration configuration;
 
-	private GitlabAPI gitlabApiMock;
+	private GitLabApi gitlabApiMock;
 
-	private GitlabProject projectMock;
+	private GitLabProject projectMock;
 
 	@InjectMocks
 	private PipelineBreaker cut;
 
 	@Before
 	public void setUp() {
-		gitlabApiMock = mock(GitlabAPI.class);
-		projectMock = mock(GitlabProject.class);
+		gitlabApiMock = mock(GitLabApi.class);
+		projectMock = mock(GitLabProject.class);
 		when(configuration.createGitLabConnection()).thenReturn(gitlabApiMock);
 		when(configuration.getProject()).thenReturn(projectMock);
+		when(projectMock.getId()).thenReturn(42);
 	}
 
 	@Test
@@ -76,7 +77,7 @@ public class PipelineBreakerTest {
 		when(reportMock.getIssues()).thenReturn(Stream.empty());
 		when(reportMock.getBuildCommitSha()).thenReturn(hash);
 
-		when(gitlabApiMock.createCommitStatus(any(), anyString(), anyString(), anyString(), anyString(), anyString(), anyString())).thenThrow(new IOException(
+		when(gitlabApiMock.createCommitStatus(anyInt(), anyString(), anyString(), anyString(), anyString())).thenThrow(new IOException(
 			"Test exception path"));
 
 		cut.process(reportMock);
@@ -98,7 +99,7 @@ public class PipelineBreakerTest {
 
 		cut.process(reportMock);
 
-		verify(gitlabApiMock).createCommitStatus(projectMock, hash, "success", null, "SonarQube", null, "No critical (or worse) issues found.");
+		verify(gitlabApiMock).createCommitStatus(42, hash, "success", "SonarQube", "No critical (or worse) issues found.");
 	}
 
 	@Test
@@ -117,7 +118,7 @@ public class PipelineBreakerTest {
 
 		cut.process(reportMock);
 
-		verify(gitlabApiMock).createCommitStatus(projectMock, hash, "failed", null, "SonarQube", null, "A critical or worse issue has been found.");
+		verify(gitlabApiMock).createCommitStatus(42, hash, "failed", "SonarQube", "A critical or worse issue has been found.");
 	}
 
 	@Test
@@ -136,7 +137,7 @@ public class PipelineBreakerTest {
 
 		cut.process(reportMock);
 
-		verify(gitlabApiMock).createCommitStatus(projectMock, hash, "failed", null, "SonarQube", null, "A critical or worse issue has been found.");
+		verify(gitlabApiMock).createCommitStatus(42, hash, "failed", "SonarQube", "A critical or worse issue has been found.");
 	}
 
 	private MappedIssue mockIssue(Severity severity) {

@@ -1,8 +1,9 @@
 package org.johnnei.sgp.internal.model.diff;
 
-import org.gitlab.api.models.GitlabCommitDiff;
 import org.hamcrest.core.IsCollectionContaining;
 import org.junit.Test;
+
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabCommitDiff;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -15,7 +16,7 @@ public class UnifiedDiffTest {
 
 	@Test
 	public void testFileAdded() {
-		GitlabCommitDiff diff = mock(GitlabCommitDiff.class);
+		GitLabCommitDiff diff = mock(GitLabCommitDiff.class);
 		when(diff.getAMode()).thenReturn("0");
 		when(diff.getBMode()).thenReturn("100644");
 		when(diff.getNewFile()).thenReturn(true);
@@ -34,7 +35,7 @@ public class UnifiedDiffTest {
 
 	@Test
 	public void testFileModifiedSingleHunk() {
-		GitlabCommitDiff diff = mock(GitlabCommitDiff.class);
+		GitLabCommitDiff diff = mock(GitLabCommitDiff.class);
 		when(diff.getAMode()).thenReturn("100644");
 		when(diff.getBMode()).thenReturn("100644");
 		when(diff.getNewFile()).thenReturn(false);
@@ -53,7 +54,7 @@ public class UnifiedDiffTest {
 
 	@Test
 	public void testMovedFiled() {
-		GitlabCommitDiff diff = mock(GitlabCommitDiff.class);
+		GitLabCommitDiff diff = mock(GitLabCommitDiff.class);
 		when(diff.getAMode()).thenReturn("100644");
 		when(diff.getBMode()).thenReturn("100644");
 		when(diff.getNewFile()).thenReturn(false);

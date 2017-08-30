@@ -6,9 +6,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.Stream;
 
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.models.CommitComment;
-import org.gitlab.api.models.GitlabProject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -18,6 +15,9 @@ import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.batch.rule.Severity;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.CommitComment;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabProject;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 import org.johnnei.sgp.internal.model.diff.HunkRange;
@@ -31,6 +31,7 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -65,8 +66,8 @@ public class CommitCommenterTest {
 		thrown.expect(IllegalStateException.class);
 		thrown.expectCause(isA(IOException.class));
 
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabApi apiMock = mock(GitLabApi.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
 
 		when(projectMock.getId()).thenReturn(projectId);
@@ -83,8 +84,8 @@ public class CommitCommenterTest {
 
 	@Test
 	public void testProcess() throws Exception {
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabApi apiMock = mock(GitLabApi.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
 		PostJobIssue issueMock = mock(PostJobIssue.class);
 		InputComponent inputComponentMock = mock(InputComponent.class);
@@ -114,7 +115,7 @@ public class CommitCommenterTest {
 			eq(hash),
 			commentCaptor.capture(),
 			eq(path),
-			eq(Integer.toString(line)),
+			eq(line),
 			eq("new")
 		);
 
@@ -124,7 +125,7 @@ public class CommitCommenterTest {
 			eq(hash),
 			summaryCaptor.capture(),
 			isNull(String.class),
-			isNull(String.class),
+			isNull(Integer.class),
 			isNull(String.class)
 		);
 
@@ -135,8 +136,8 @@ public class CommitCommenterTest {
 
 	@Test
 	public void testProcessIssueOnFile() throws Exception {
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabApi apiMock = mock(GitLabApi.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
 		PostJobIssue issueMock = mock(PostJobIssue.class);
 		InputComponent inputComponentMock = mock(InputComponent.class);
@@ -171,7 +172,7 @@ public class CommitCommenterTest {
 			eq(hash),
 			commentCaptor.capture(),
 			eq(path),
-			eq(Integer.toString(5)),
+			eq(5),
 			eq("new")
 		);
 
@@ -181,7 +182,7 @@ public class CommitCommenterTest {
 			eq(hash),
 			summaryCaptor.capture(),
 			isNull(String.class),
-			isNull(String.class),
+			isNull(Integer.class),
 			isNull(String.class)
 		);
 
@@ -195,8 +196,8 @@ public class CommitCommenterTest {
 		thrown.expect(IllegalStateException.class);
 		thrown.expectMessage("diff");
 
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabApi apiMock = mock(GitLabApi.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
 
 		when(apiMock.getCommitComments(projectId, hash)).thenReturn(Collections.emptyList());
@@ -220,8 +221,8 @@ public class CommitCommenterTest {
 	public void testProcessExcludeExistingWithFileComments() throws Exception {
 		String summary = "SonarQube analysis reported 0 issues.\n\nWatch the comments in this conversation to review them.";
 
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabApi apiMock = mock(GitLabApi.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
 
 		CommitComment commentMock = mock(CommitComment.class);
@@ -260,8 +261,8 @@ public class CommitCommenterTest {
 	public void testProcessExistingFileLevelIssue() throws Exception {
 		String summary = "SonarQube analysis reported 0 issues.\n\nWatch the comments in this conversation to review them.";
 
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabApi apiMock = mock(GitLabApi.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
 
 		CommitComment commentMock = mock(CommitComment.class);
@@ -298,8 +299,8 @@ public class CommitCommenterTest {
 		// On the second analysis a comparison against the Summary should not cause issues.
 		String summary = "SonarQube analysis reported 0 issues.\n\nWatch the comments in this conversation to review them.";
 
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabApi apiMock = mock(GitLabApi.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
 
 		CommitComment commentMock = mock(CommitComment.class);
@@ -334,7 +335,7 @@ public class CommitCommenterTest {
 			eq(hash),
 			eq(":exclamation: Remove this violation!"),
 			eq("/not/my/file.java"),
-			eq(Integer.toString(88)),
+			eq(88),
 			eq("new")
 		);
 		verifyNoMoreInteractions(apiMock);
@@ -345,8 +346,8 @@ public class CommitCommenterTest {
 		thrown.expect(ProcessException.class);
 		thrown.expectMessage("comments failed");
 
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabApi apiMock = mock(GitLabApi.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
 
 		String hash = "a2b4";
@@ -363,14 +364,14 @@ public class CommitCommenterTest {
 		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
 		when(reportMock.getProject()).thenReturn(projectMock);
 
-		when(apiMock.createCommitComment(
+		doThrow(new IOException("Test exception path")).when(apiMock).createCommitComment(
 			anyInt(),
 			anyString(),
 			anyString(),
 			anyString(),
-			anyString(),
+			anyInt(),
 			anyString()
-		)).thenThrow(new IOException("Test exception path"));
+		);
 
 		CommitCommenter cut = new CommitCommenter(apiMock);
 
@@ -382,8 +383,8 @@ public class CommitCommenterTest {
 		thrown.expect(ProcessException.class);
 		thrown.expectMessage("summary comment");
 
-		GitlabAPI apiMock = mock(GitlabAPI.class);
-		GitlabProject projectMock = mock(GitlabProject.class);
+		GitLabApi apiMock = mock(GitLabApi.class);
+		GitLabProject projectMock = mock(GitLabProject.class);
 		SonarReport reportMock = mock(SonarReport.class);
 
 		String hash = "a2b4";
@@ -400,14 +401,14 @@ public class CommitCommenterTest {
 		when(reportMock.getProject()).thenReturn(projectMock);
 		when(reportMock.getCommitShas()).thenReturn(Stream.of(hash));
 
-		when(apiMock.createCommitComment(
+		doThrow(new IOException("Test exception path")).when(apiMock).createCommitComment(
 			anyInt(),
 			anyString(),
 			anyString(),
 			isNull(String.class),
-			isNull(String.class),
+			isNull(Integer.class),
 			isNull(String.class)
-		)).thenThrow(new IOException("Test exception path"));
+		);
 
 		CommitCommenter cut = new CommitCommenter(apiMock);
 

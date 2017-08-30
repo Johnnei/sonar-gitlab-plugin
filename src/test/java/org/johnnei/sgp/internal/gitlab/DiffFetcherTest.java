@@ -4,11 +4,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.models.GitlabCommit;
-import org.gitlab.api.models.GitlabCommitComparison;
-import org.gitlab.api.models.GitlabCommitDiff;
-import org.gitlab.api.models.GitlabProject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -17,6 +12,11 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabCommit;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabCommitComparison;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabCommitDiff;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabProject;
 import org.johnnei.sgp.internal.model.diff.UnifiedDiff;
 import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
 
@@ -34,7 +34,7 @@ public class DiffFetcherTest {
 	public ExpectedException thrown = ExpectedException.none();
 
 	@Mock
-	private GitlabAPI gitlabApiMock;
+	private GitLabApi gitlabApiMock;
 
 	@Mock
 	private GitLabPluginConfiguration gitLabPluginConfigurationMock;
@@ -49,7 +49,7 @@ public class DiffFetcherTest {
 
 	@Test
 	public void testGetDiffs() throws Exception {
-		GitlabProject project = mock(GitlabProject.class);
+		GitLabProject project = mock(GitLabProject.class);
 		when(project.getId()).thenReturn(5);
 		String hash = "a2b4";
 
@@ -57,10 +57,10 @@ public class DiffFetcherTest {
 		when(gitLabPluginConfigurationMock.getCommitHash()).thenReturn(hash);
 		when(gitLabPluginConfigurationMock.getProject()).thenReturn(project);
 
-		GitlabCommit commit = mock(GitlabCommit.class);
+		GitLabCommit commit = mock(GitLabCommit.class);
 		when(commit.getShortId()).thenReturn(hash);
 
-		GitlabCommitComparison comparison = mock(GitlabCommitComparison.class);
+		GitLabCommitComparison comparison = mock(GitLabCommitComparison.class);
 		when(comparison.getCommits()).thenReturn(Collections.singletonList(commit));
 
 		when(gitlabApiMock.compareCommits(5, "develop", hash)).thenReturn(comparison);
@@ -74,7 +74,7 @@ public class DiffFetcherTest {
 			" import java.io.IOException;\n" +
 			" import java.nio.file.Files;";
 
-		GitlabCommitDiff commitDiff = mock(GitlabCommitDiff.class);
+		GitLabCommitDiff commitDiff = mock(GitLabCommitDiff.class);
 		when(commitDiff.getDeletedFile()).thenReturn(false);
 		when(commitDiff.getDiff()).thenReturn(diff);
 
@@ -92,7 +92,7 @@ public class DiffFetcherTest {
 		thrown.expectMessage("compare");
 		thrown.expectCause(isA(IOException.class));
 
-		GitlabProject project = mock(GitlabProject.class);
+		GitLabProject project = mock(GitLabProject.class);
 		when(project.getId()).thenReturn(5);
 		String hash = "a2b4";
 
@@ -111,7 +111,7 @@ public class DiffFetcherTest {
 		thrown.expectMessage("diff");
 		thrown.expectCause(isA(IOException.class));
 
-		GitlabProject project = mock(GitlabProject.class);
+		GitLabProject project = mock(GitLabProject.class);
 		when(project.getId()).thenReturn(5);
 		String hash = "a2b4";
 
@@ -119,10 +119,10 @@ public class DiffFetcherTest {
 		when(gitLabPluginConfigurationMock.getCommitHash()).thenReturn(hash);
 		when(gitLabPluginConfigurationMock.getProject()).thenReturn(project);
 
-		GitlabCommit commit = mock(GitlabCommit.class);
+		GitLabCommit commit = mock(GitLabCommit.class);
 		when(commit.getShortId()).thenReturn(hash);
 
-		GitlabCommitComparison comparison = mock(GitlabCommitComparison.class);
+		GitLabCommitComparison comparison = mock(GitLabCommitComparison.class);
 		when(comparison.getCommits()).thenReturn(Collections.singletonList(commit));
 
 		when(gitlabApiMock.compareCommits(5, "develop", hash)).thenReturn(comparison);

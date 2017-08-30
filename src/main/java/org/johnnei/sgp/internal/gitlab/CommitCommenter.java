@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.gitlab.api.GitlabAPI;
-import org.gitlab.api.models.CommitComment;
 import org.sonar.api.batch.rule.Severity;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.CommitComment;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 
@@ -24,9 +24,9 @@ public class CommitCommenter {
 	private static final Logger LOGGER = Loggers.get(CommitCommenter.class);
 
 	@Nonnull
-	private GitlabAPI gitlabApi;
+	private GitLabApi gitlabApi;
 
-	public CommitCommenter(@Nonnull GitlabAPI gitlabApi) {
+	public CommitCommenter(@Nonnull GitLabApi gitlabApi) {
 		this.gitlabApi = gitlabApi;
 	}
 
@@ -138,7 +138,7 @@ public class CommitCommenter {
 		return existingComments.stream()
 			.filter(comment -> comment.getPath() != null)
 			.filter(comment -> Objects.equals(comment.getPath(), issue.getPath()))
-			.filter(comment -> Objects.equals(comment.getLine(), formatLineNumber(issue)))
+			.filter(comment -> Objects.equals(comment.getLine(), Integer.toString(formatLineNumber(issue))))
 			.anyMatch(comment -> comment.getNote().endsWith(issue.getIssue().message()));
 	}
 
@@ -150,7 +150,6 @@ public class CommitCommenter {
 	 * @return <code>true</code> when the comment was successfully created. Otherwise <code>false</code>.
 	 */
 	private boolean postComment(SonarReport report, MappedIssue mappedIssue) {
-
 		MarkdownBuilder messageBuilder = new MarkdownBuilder();
 		messageBuilder.addSeverityIcon(mappedIssue.getIssue().severity());
 		messageBuilder.addText(mappedIssue.getIssue().message());
@@ -171,7 +170,7 @@ public class CommitCommenter {
 		}
 	}
 
-	private static String formatLineNumber(MappedIssue mappedIssue) {
+	private static int formatLineNumber(MappedIssue mappedIssue) {
 		int line;
 
 		if (mappedIssue.getIssue().line() == null) {
@@ -188,6 +187,6 @@ public class CommitCommenter {
 			line = mappedIssue.getIssue().line();
 		}
 
-		return Integer.toString(line);
+		return line;
 	}
 }

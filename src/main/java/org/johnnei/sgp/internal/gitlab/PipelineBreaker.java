@@ -2,12 +2,12 @@ package org.johnnei.sgp.internal.gitlab;
 
 import java.io.IOException;
 
-import org.gitlab.api.GitlabAPI;
 import org.sonar.api.batch.BatchSide;
 import org.sonar.api.batch.InstantiationStrategy;
 import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.batch.rule.Severity;
 
+import org.johnnei.sgp.internal.gitlab.api.v4.GitLabApi;
 import org.johnnei.sgp.internal.model.MappedIssue;
 import org.johnnei.sgp.internal.model.SonarReport;
 import org.johnnei.sgp.internal.sonar.GitLabPluginConfiguration;
@@ -29,7 +29,7 @@ public class PipelineBreaker {
 			return;
 		}
 
-		GitlabAPI gitlabAPI = configuration.createGitLabConnection();
+		GitLabApi gitlabAPI = configuration.createGitLabConnection();
 
 		String status;
 		String message;
@@ -43,7 +43,7 @@ public class PipelineBreaker {
 		}
 
 		try {
-			gitlabAPI.createCommitStatus(configuration.getProject(), report.getBuildCommitSha(), status, null, "SonarQube", null, message);
+			gitlabAPI.createCommitStatus(configuration.getProject().getId(), report.getBuildCommitSha(), status, "SonarQube", message);
 		} catch (IOException e) {
 			throw new ProcessException("Failed to set commit status.", e);
 		}

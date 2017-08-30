@@ -9,7 +9,8 @@ import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.gitlab.api.models.GitlabCommitDiff;
+import org.johnnei.sgp.internal.gitlab.api.v4.model.GitLabCommitDiff;
+
 
 /**
  * Represents the information of a parsed unified diff.
@@ -32,7 +33,7 @@ public class UnifiedDiff {
 
 	private final Collection<HunkRange> ranges;
 
-	public UnifiedDiff(String commitSha, GitlabCommitDiff commitDiff) {
+	public UnifiedDiff(String commitSha, GitLabCommitDiff commitDiff) {
 		this.ranges = new ArrayList<>();
 		this.commitSha = commitSha;
 		this.filepath = commitDiff.getNewPath();
