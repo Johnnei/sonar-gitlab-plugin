@@ -19,10 +19,10 @@ public class GitLabCommitDiff {
 	private boolean deletedFile;
 
 	@JsonProperty("a_mode")
-	private String AMode;
+	private String aMode;
 
 	@JsonProperty("b_mode")
-	private String BMode;
+	private String bMode;
 
 	@JsonProperty("new_file")
 	private boolean newFile;
@@ -48,11 +48,11 @@ public class GitLabCommitDiff {
 	}
 
 	public String getAMode() {
-		return AMode;
+		return aMode;
 	}
 
 	public String getBMode() {
-		return BMode;
+		return bMode;
 	}
 
 	public boolean getNewFile() {
