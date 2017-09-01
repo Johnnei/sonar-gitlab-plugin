@@ -75,6 +75,7 @@ public abstract class IntegrationTest {
 		gitlab.ensureItUserCreated();
 		gitlab.ensureProjectLimitRaised();
 		gitlab.createProject(getClass(), testName);
+		sonarqube.ensureDefaultQualityProfile();
 
 		prepareGitRepo(repoFolder);
 	}
@@ -122,6 +123,7 @@ public abstract class IntegrationTest {
 		}
 
 		try {
+			LOGGER.debug("Loading test expectations from: {}", url);
 			return new File(url.toURI()).toPath();
 		} catch (URISyntaxException e) {
 			throw new IllegalArgumentException("Invalid resource path", e);

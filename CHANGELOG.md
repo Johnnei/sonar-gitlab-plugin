@@ -1,6 +1,7 @@
 # Unreleased
 
 ## Compatibility Changes
+- [SGP-47](https://jira.johnnei.org/browse/SGP-47): Drop validated support for GitLab 9.1, 9.2. Test support with SonarQube 6.5.
 - [SGP-48](https://jira.johnnei.org/browse/SGP-48): Drop support for GitLab API v3
 
 ## Improvements
