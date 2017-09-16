@@ -1,5 +1,8 @@
 # Unreleased
 
+# 0.2.2 (2017-09-16)
+No changes since last rc.
+
 # 0.2.2-rc.1 (2017-09-02)
 ## Compatibility Changes
 - [SGP-47](https://jira.johnnei.org/browse/SGP-47): Drop validated support for GitLab 9.1, 9.2. Test support with SonarQube 6.5.
